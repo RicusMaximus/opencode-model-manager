@@ -1,0 +1,51 @@
+:root {
+  /* Background layers */
+  --bg-deep:        #0a0d14;
+  --bg-base:        #0f1419;
+  --bg-sidebar:     #171c21;
+  --bg-card:        #1c2126;
+  --bg-workspace:   #262930;
+  --bg-elevated:    #30353d;
+
+  /* Borders */
+  --border:         #404752;
+
+  /* Text */
+  --text-muted:     #6b7280;
+  --text-dim:       #8c919e;
+  --text-secondary: #bfc7d4;
+  --text-primary:   #dde3eb;
+
+  /* Accents */
+  --accent-blue:    #a3c9ff;
+  --accent-green:   #66de70;
+  --accent-yellow:  #fabf45;
+  --accent-gold:    #d19921;
+  --blue-bright:    #59a6ff;
+  --green-save:     #26a540;
+  --green-save-text:#00330a;
+  --blue-btn-text:  #00305c;
+  --red-validator:  #940009;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Elevation shadows (dark-UI — shadows go dark, highlights go light) */
+  --shadow-card:    0 1px 3px rgba(0,0,0,.45), 0 4px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.055);
+  --shadow-card-hover: 0 2px 6px rgba(0,0,0,.45), 0 10px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07);
+  --shadow-sidebar: 4px 0 24px rgba(0,0,0,.4), 1px 0 0 rgba(255,255,255,.02);
+  --shadow-sidebar-r: -4px 0 24px rgba(0,0,0,.35), -1px 0 0 rgba(255,255,255,.02);
+  --shadow-header:  0 4px 16px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.03);
+  --shadow-footer:  0 -4px 16px rgba(0,0,0,.4), 0 -1px 0 rgba(255,255,255,.02);
+  --shadow-dropdown: 0 4px 8px rgba(0,0,0,.4), 0 12px 40px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+  --shadow-input:   inset 0 2px 6px rgba(0,0,0,.45);
+  --shadow-bar:     inset 0 1px 3px rgba(0,0,0,.5);
+
+  /* Layout */
+  --header-height: 48px;
+  --footer-height: 32px;
+  --sidebar-left:  256px;
+  --sidebar-right-agents: 288px;
+  --sidebar-right-models: 320px;
+}
