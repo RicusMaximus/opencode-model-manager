@@ -186,6 +186,7 @@ export default function App() {
             <OllamaPanel
               ollamaModels={ollamaStatus.models}
               ollamaConnected={ollamaStatus.connected}
+              systemInfo={systemInfo}
             />
           )}
           {activeView === 'system' && (

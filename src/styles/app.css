@@ -345,11 +345,11 @@
 .deploy-btn:hover {
   opacity: 0.92;
   box-shadow: 0 4px 20px rgba(89,166,255,.5), 0 2px 6px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.25);
-  transform: translateY(-1px);
+  /* transform: translateY(-1px); */
 }
 
 .deploy-btn:active {
-  transform: translateY(0);
+  /* transform: translateY(0); */
   box-shadow: 0 1px 6px rgba(89,166,255,.3), inset 0 1px 0 rgba(255,255,255,.15);
 }
 
@@ -376,7 +376,7 @@
 
 .agent-card:hover {
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-3px);
+  /* transform: translateY(-3px); */
   border-color: color-mix(in srgb, var(--border) 60%, white);
 }
 
@@ -448,6 +448,18 @@
   background: color-mix(in srgb, var(--blue-bright) 18%, transparent);
   border: 1px solid color-mix(in srgb, var(--blue-bright) 50%, transparent);
   color: var(--blue-bright);
+}
+
+.agent-badge.local {
+  background: color-mix(in srgb, var(--accent-green) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-green) 38%, transparent);
+  color: var(--accent-green);
+}
+
+.agent-badge.cloud {
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 38%, transparent);
+  color: var(--accent-blue);
 }
 
 .agent-identity {
@@ -605,6 +617,41 @@
   white-space: nowrap;
   flex: 1;
   text-align: left;
+}
+
+/* Combobox input — sits inside .model-dropdown-btn */
+.model-dropdown-combobox-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.model-dropdown-btn.is-open .model-dropdown-combobox-input {
+  cursor: text;
+}
+
+.model-dropdown-combobox-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Empty search state */
+.model-dropdown-no-results {
+  padding: 14px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
 }
 
 .model-dropdown-chevron {
@@ -794,11 +841,11 @@
 .pull-model-btn:hover {
   opacity: 0.92;
   box-shadow: 0 4px 20px rgba(89,166,255,.5), 0 2px 6px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.25);
-  transform: translateY(-1px);
+  /* transform: translateY(-1px); */
 }
 
 .pull-model-btn:active {
-  transform: translateY(0);
+  /* transform: translateY(0); */
   box-shadow: 0 1px 6px rgba(89,166,255,.3), inset 0 1px 0 rgba(255,255,255,.15);
 }
 
@@ -834,7 +881,7 @@
 
 .model-card:hover {
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-3px);
+  /* transform: translateY(-3px); */
   border-color: color-mix(in srgb, var(--border) 60%, white);
 }
 
@@ -876,22 +923,6 @@
   flex-shrink: 0;
 }
 
-.model-card-menu-btn {
-  color: var(--text-dim);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.model-card-menu-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
 
 .model-stats-grid {
   display: grid;
@@ -927,40 +958,83 @@
   margin: 0 -16px;
 }
 
-.model-card-footer {
+/* ── Model Card — Performance Meter ────────────────────────────────────────── */
+
+.model-perf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-perf-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
 }
 
-.model-id-label {
+.model-perf-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.model-perf-tps {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.model-perf-bar-bg {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: var(--shadow-bar);
+}
+
+.model-perf-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease, background 0.6s ease;
+}
+
+.model-perf-bar-skeleton {
+  height: 100%;
+  width: 100%;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 0%,
+    var(--bg-workspace) 50%,
+    var(--bg-elevated) 100%
+  );
+  background-size: 200% 100%;
+  animation: perf-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes perf-shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.model-perf-footer {
+  display: flex;
+  align-items: center;
+}
+
+.model-perf-mode {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
+  color: var(--text-dim);
 }
 
-.model-use-btn {
-  background: var(--bg-elevated);
-  border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
+.model-perf-tier {
   font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--text-primary);
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-  transition: background 0.15s;
-}
-
-.model-use-btn:hover {
-  background: var(--border);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* ── Right Sidebar ─────────────────────────────────────────────────────────── */
@@ -1278,11 +1352,11 @@
 .save-btn:hover {
   opacity: 0.92;
   box-shadow: 0 3px 14px rgba(38,165,64,.5), 0 2px 5px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.2);
-  transform: translateY(-1px);
+  /* transform: translateY(-1px); */
 }
 
 .save-btn:active {
-  transform: translateY(0);
+  /* transform: translateY(0); */
   box-shadow: 0 1px 4px rgba(38,165,64,.3), inset 0 1px 0 rgba(255,255,255,.1);
 }
 
