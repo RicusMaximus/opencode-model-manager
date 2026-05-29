@@ -27,15 +27,17 @@ export default function AgentPanel({ agents, ollamaModels, onModelChange }) {
       </div>
 
       {/* Bento grid */}
-      <div className="agent-grid">
-        {agents.map((agent) => (
-          <AgentCard
-            key={agent.id}
-            agent={agent}
-            ollamaModels={ollamaModels}
-            onModelChange={onModelChange}
-          />
-        ))}
+      <div className="agent-grid-shell">
+        <div className="agent-grid">
+          {agents.map((agent) => (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              ollamaModels={ollamaModels}
+              onModelChange={onModelChange}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

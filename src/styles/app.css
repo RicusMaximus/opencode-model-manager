@@ -353,11 +353,36 @@
   box-shadow: 0 1px 6px rgba(89,166,255,.3), inset 0 1px 0 rgba(255,255,255,.15);
 }
 
-/* Agent bento grid */
+/* Agent bento grid — responsive, container-query driven.
+   Cards are landscape at the golden ratio: aspect-ratio 1.618 / 1.
+   Column count steps: 1 col (default) → 2 cols (≥ 560px) → 3 cols (≥ 960px).
+   Capped at 3 columns max and 1280px total width including gaps.
+   3-col max keeps card height readable with the 5-row card content. */
+.agent-grid-shell {
+  container-type: inline-size;
+  container-name: agent-grid;
+  max-width: 1280px;
+  margin-inline: auto;
+  width: 100%;
+}
+
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 16px;
+  width: 100%;
+}
+
+@container agent-grid (min-width: 560px) {
+  .agent-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container agent-grid (min-width: 960px) {
+  .agent-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 /* ── Agent Card ────────────────────────────────────────────────────────────── */
@@ -372,6 +397,8 @@
   gap: 14px;
   box-shadow: var(--shadow-card);
   transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+  aspect-ratio: 1.618 / 1;
+  overflow: hidden;
 }
 
 .agent-card:hover {
