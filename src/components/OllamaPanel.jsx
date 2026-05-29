@@ -26,7 +26,7 @@ function PlusIcon({ size = 16 }) {
   )
 }
 
-export default function OllamaPanel({ ollamaModels, ollamaConnected }) {
+export default function OllamaPanel({ ollamaModels, ollamaConnected, systemInfo }) {
   const [search, setSearch] = useState('')
 
   const filtered = ollamaModels.filter((m) =>
@@ -73,7 +73,7 @@ export default function OllamaPanel({ ollamaModels, ollamaConnected }) {
       ) : (
         <div className="model-grid">
           {filtered.map((model) => (
-            <ModelCard key={model.name} model={model} />
+            <ModelCard key={model.name} model={model} systemInfo={systemInfo} />
           ))}
         </div>
       )}

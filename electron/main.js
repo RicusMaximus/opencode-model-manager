@@ -7,6 +7,12 @@ const http = require('http')
 const isDev = process.env.NODE_ENV === 'development'
 const DEFAULT_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode')
 
+// Prevent "Unable to move the cache: Access is denied" errors on Windows.
+// Electron/Chromium tries to relocate its GPU shader disk cache on startup;
+// if the temp directory isn't writable (corporate policy, AV quarantine, etc.)
+// it logs repeated errors.  Disabling the cache entirely is the safest fix.
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
+
 let mainWindow
 
 function createWindow() {

@@ -7,9 +7,19 @@ function getBadgeText(modelId) {
   return modelId.replace(/:latest$/, '')
 }
 
+/**
+ * Cloud models always use "provider/model-name" — Ollama models never contain a slash.
+ * Returns 'cloud' | 'local' | null
+ */
+function getModelKind(modelId) {
+  if (!modelId) return null
+  return modelId.includes('/') ? 'cloud' : 'local'
+}
+
 export default function AgentCard({ agent, ollamaModels, onModelChange }) {
   const [expanded, setExpanded] = useState(false)
-  const badge = getBadgeText(agent.model)
+  const badge     = getBadgeText(agent.model)
+  const modelKind = getModelKind(agent.model)
 
   const showResponsibilities = agent.responsibilities && agent.responsibilities.length > 0
   const visibleResponsibilities = expanded
@@ -31,6 +41,9 @@ export default function AgentCard({ agent, ollamaModels, onModelChange }) {
         <div className="agent-card-badges">
           {agent.mode === 'primary' && (
             <span className="agent-badge primary">Primary</span>
+          )}
+          {modelKind && (
+            <span className={`agent-badge ${modelKind}`}>{modelKind}</span>
           )}
           <span className="agent-model-badge" title={agent.model ?? 'no model'}>
             {badge}
