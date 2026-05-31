@@ -1,0 +1,27 @@
+// ── main.scss — Root Entry ───────────────────────────────────────────────────
+// Only @use statements. No raw CSS in this file.
+// Order: vendors → abstracts → base → themes → layout → components → pages → utilities
+
+// 1. Vendors (third-party — currently empty, kept for ordering)
+@use "vendors";
+
+// 2. Abstracts — variables/maps/functions/mixins/placeholders (no CSS output)
+@use "abstracts";
+
+// 3. Base — reset, :root custom-property declarations, typography, base elements
+@use "base";
+
+// 4. Themes — additional theme overrides on top of base :root
+@use "themes";
+
+// 5. Layout — app shell + grid/sidebar/header/footer
+@use "layout";
+
+// 6. Components — individual UI components
+@use "components";
+
+// 7. Pages — page-scope only
+@use "pages";
+
+// 8. Utilities — single-purpose helpers, LAST so they win the cascade
+@use "utilities";

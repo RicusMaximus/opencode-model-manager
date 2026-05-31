@@ -1,0 +1,8 @@
+// ── Layout: Barrel ──────────────────────────────────────────────────────────
+
+@forward 'app-shell';
+@forward 'sidebar-left';
+@forward 'sidebar-right';
+@forward 'status-bar';
+@forward 'panel';
+@forward 'agent-grid';

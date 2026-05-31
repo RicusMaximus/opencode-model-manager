@@ -1,0 +1,9 @@
+// ── Abstracts: Barrel ───────────────────────────────────────────────────────
+// @forward order: variables → maps → functions → mixins → placeholders
+// (maps depends on variables; functions depends on maps; mixins on both)
+
+@forward 'variables';
+@forward 'maps';
+@forward 'functions';
+@forward 'mixins';
+@forward 'placeholders';

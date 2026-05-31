@@ -39,7 +39,9 @@ function getDisplayName(modelId, ollamaModels) {
   if (!modelId) return ''
   const cloud = CLOUD_MODELS.find((m) => m.id === modelId)
   if (cloud) return cloud.name
-  const normalized = normalizeName(modelId)
+  const ollamaPrefix = 'ollama/'
+  const bareId = modelId.startsWith(ollamaPrefix) ? modelId.slice(ollamaPrefix.length) : modelId
+  const normalized = normalizeName(bareId)
   const ollama = ollamaModels.find((m) => normalizeName(m.name) === normalized)
   if (ollama) return normalizeName(ollama.name)
   return modelId
@@ -160,14 +162,14 @@ export default function ModelDropdown({ value, onChange, ollamaModels = [] }) {
                 <>
                   <div className="model-dropdown-section-header">Local · Ollama</div>
                   {filteredOllama.map((m) => {
-                    const id = normalizeName(m.name)
+                    const id = `ollama/${normalizeName(m.name)}`
                     return (
                       <Option
                         key={id}
                         id={id}
-                        label={id}
+                        label={normalizeName(m.name)}
                         meta={m.details?.parameter_size || undefined}
-                        isSelected={normalizeName(value) === id}
+                        isSelected={value === id}
                       />
                     )
                   })}

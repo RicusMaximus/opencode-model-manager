@@ -1,0 +1,10 @@
+// ── Utilities: Colors ───────────────────────────────────────────────────────
+// Generated via @each over $colors (21 keys × 3 properties = 63 classes).
+
+@use '../abstracts/maps' as m;
+
+@each $name, $value in m.$colors {
+  .text-#{$name}   { color: $value; }
+  .bg-#{$name}     { background-color: $value; }
+  .border-#{$name} { border-color: $value; }
+}

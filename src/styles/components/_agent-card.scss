@@ -1,0 +1,213 @@
+// ── Components: Agent Card ──────────────────────────────────────────────────
+
+.agent-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.22s ease,
+    transform 0.22s ease,
+    border-color 0.22s ease;
+  aspect-ratio: 1.618 / 1;
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: color-mix(in srgb, var(--border) 60%, white);
+  }
+}
+
+.agent-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.agent-color-sq {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.agent-model-badge {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-name {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-description {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+// Enhanced identity layout
+.agent-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.agent-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 2px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  &.primary {
+    background: color-mix(in srgb, var(--blue-bright) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--blue-bright) 50%, transparent);
+    color: var(--blue-bright);
+  }
+
+  &.local {
+    background: color-mix(in srgb, var(--accent-green) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-green) 38%, transparent);
+    color: var(--accent-green);
+  }
+
+  &.cloud {
+    background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-blue) 38%, transparent);
+    color: var(--accent-blue);
+  }
+}
+
+.agent-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agent-version {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.agent-section-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 2px;
+}
+
+// Tool chips
+.agent-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-tool-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.agent-tool-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  padding: 2px 8px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--chip-color, #59a6ff) 12%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--chip-color, #59a6ff) 35%, transparent);
+  color: var(--chip-color, #59a6ff);
+  white-space: nowrap;
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--chip-color, #59a6ff) 20%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+// Model row
+.agent-model-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto; // pushes to bottom of card
+}
+
+// Per-card settings cog button (top-right corner)
+.agent-card-settings-btn {
+  // position: absolute;
+  // top: 10px;
+  // right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+  z-index: 1;
+
+  &:hover {
+    background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+    border-color: color-mix(in srgb, var(--accent-blue) 35%, transparent);
+    color: var(--accent-blue);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px
+      color-mix(in srgb, var(--accent-blue) 30%, transparent);
+  }
+}

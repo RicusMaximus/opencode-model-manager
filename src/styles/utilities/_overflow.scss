@@ -1,0 +1,17 @@
+// ── Utilities: Overflow ─────────────────────────────────────────────────────
+
+// All axes
+.overflow-hidden  { overflow: hidden; }
+.overflow-auto    { overflow: auto; }
+.overflow-scroll  { overflow: scroll; }
+.overflow-visible { overflow: visible; }
+
+// X axis
+.overflow-x-hidden { overflow-x: hidden; }
+.overflow-x-auto   { overflow-x: auto; }
+.overflow-x-scroll { overflow-x: scroll; }
+
+// Y axis
+.overflow-y-hidden { overflow-y: hidden; }
+.overflow-y-auto   { overflow-y: auto; }
+.overflow-y-scroll { overflow-y: scroll; }

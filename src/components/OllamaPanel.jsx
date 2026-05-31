@@ -1,37 +1,56 @@
-import React, { useState } from 'react'
-import ModelCard from './ModelCard.jsx'
+import React, { useState } from "react";
+import ModelCard from "./ModelCard.jsx";
 
 function SearchIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M10.5 10.5L14 14"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </svg>
-  )
+  );
 }
 
 function FilterIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <path d="M2 4H14M4.5 8H11.5M7 12H9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M2 4H14M4.5 8H11.5M7 12H9"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
     </svg>
-  )
+  );
 }
 
 function PlusIcon({ size = 16 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
-      <path d="M8 2V14M2 8H14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path
+        d="M8 2V14M2 8H14"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </svg>
-  )
+  );
 }
 
-export default function OllamaPanel({ ollamaModels, ollamaConnected, systemInfo }) {
-  const [search, setSearch] = useState('')
+export default function OllamaPanel({
+  ollamaModels,
+  ollamaConnected,
+  systemInfo
+}) {
+  const [search, setSearch] = useState("");
 
   const filtered = ollamaModels.filter((m) =>
-    (m.name || '').toLowerCase().includes(search.toLowerCase())
-  )
+    (m.name || "").toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="ollama-panel">
@@ -53,7 +72,7 @@ export default function OllamaPanel({ ollamaModels, ollamaConnected, systemInfo 
           <FilterIcon size={16} />
           Filter
         </button>
-        <button className="pull-model-btn" type="button">
+        <button className="deploy-btn" type="button">
           <PlusIcon size={16} />
           Pull Model
         </button>
@@ -62,7 +81,10 @@ export default function OllamaPanel({ ollamaModels, ollamaConnected, systemInfo 
       {/* Grid */}
       {!ollamaConnected ? (
         <div className="models-empty">
-          <p>Ollama is not connected. Start Ollama to see locally installed models.</p>
+          <p>
+            Ollama is not connected. Start Ollama to see locally installed
+            models.
+          </p>
         </div>
       ) : filtered.length === 0 ? (
         <div className="models-empty">
@@ -78,5 +100,5 @@ export default function OllamaPanel({ ollamaModels, ollamaConnected, systemInfo 
         </div>
       )}
     </div>
-  )
+  );
 }

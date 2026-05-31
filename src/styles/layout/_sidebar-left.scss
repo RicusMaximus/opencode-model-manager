@@ -1,0 +1,48 @@
+// ── Layout: Left Sidebar ────────────────────────────────────────────────────
+
+.sidebar-left {
+  width: var(--sidebar-left);
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-sidebar);
+  z-index: 5;
+}
+
+.sidebar-logo {
+  padding: 20px 24px 16px 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-logo-name {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--accent-blue);
+}
+
+.sidebar-logo-version {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.sidebar-nav {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.sidebar-bottom {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}

@@ -1,0 +1,32 @@
+// ── Abstracts: Placeholders ─────────────────────────────────────────────────
+
+@use 'functions' as f;
+
+/// Card surface — background + border + radius + shadow.
+%card-surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: f.radius('xl');
+  box-shadow: var(--shadow-card);
+}
+
+/// Vertically scrollable, horizontally clipped.
+%scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/// Electron drag exclusion — buttons/inputs inside drag regions.
+%dragless {
+  -webkit-app-region: no-drag;
+}
+
+/// Repeated uppercase section label pattern.
+%uppercase-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

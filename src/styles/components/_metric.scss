@@ -1,0 +1,51 @@
+// ── Components: Metric Row ──────────────────────────────────────────────────
+
+.metric-row {
+  margin-bottom: 14px;
+}
+
+.metric-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.metric-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+
+  &.blue   { color: var(--accent-blue); }
+  &.green  { color: var(--accent-green); }
+  &.yellow { color: var(--accent-yellow); }
+}
+
+.metric-bar-bg {
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-bar);
+
+  &.tall {
+    height: 6px;
+  }
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.bar-blue   { background: var(--accent-blue); }
+.bar-green  { background: var(--accent-green); }
+.bar-yellow { background: var(--accent-yellow); }

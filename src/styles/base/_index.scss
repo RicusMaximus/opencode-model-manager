@@ -1,0 +1,7 @@
+// ── Base: Barrel ────────────────────────────────────────────────────────────
+// @forward order: reset → root → typography → base
+
+@forward 'reset';
+@forward 'root';
+@forward 'typography';
+@forward 'base';

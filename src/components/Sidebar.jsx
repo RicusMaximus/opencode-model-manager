@@ -56,7 +56,7 @@ export default function Sidebar({ activeView, onNavigate, configPath, ollamaStat
         {NAV_ITEMS.map(({ id, label, Icon }) => (
           <button
             key={id}
-            className={`nav-item${activeView === id ? ' active' : ''}`}
+            className={`nav-item${(activeView === id || (id === 'agents' && activeView === 'agent-settings')) ? ' active' : ''}`}
             onClick={() => onNavigate(id)}
           >
             <span className="nav-icon">

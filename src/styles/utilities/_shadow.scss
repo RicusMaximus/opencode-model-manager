@@ -1,0 +1,19 @@
+// ── Utilities: Shadow ───────────────────────────────────────────────────────
+
+@use '../abstracts/maps' as m;
+
+// Generic unsuffixed alias (= card shadow)
+.shadow { box-shadow: var(--shadow-card); }
+
+// Alias variants: sm / md / lg
+@each $key, $value in m.$shadow-aliases {
+  .shadow-#{$key} { box-shadow: $value; }
+}
+
+// Token-specific helpers (one per shadow token)
+@each $key, $value in m.$shadows {
+  .shadow-#{$key} { box-shadow: $value; }
+}
+
+// No shadow
+.shadow-none { box-shadow: none; }

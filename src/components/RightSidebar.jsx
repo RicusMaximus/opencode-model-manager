@@ -242,7 +242,7 @@ function ModelsRightSidebar({ systemInfo }) {
 // ── Exported Component ─────────────────────────────────────────────────────
 
 export default function RightSidebar({ activeView, systemInfo, ollamaStatus, expanded }) {
-  if (activeView === 'agents' && !expanded) {
+  if ((activeView === 'agents' || activeView === 'agent-settings') && !expanded) {
     return <AgentsRightSidebar systemInfo={systemInfo} />
   }
   if (activeView === 'models' || activeView === 'system' || expanded) {

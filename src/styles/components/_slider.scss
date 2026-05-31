@@ -1,0 +1,20 @@
+// ── Components: Slider ──────────────────────────────────────────────────────
+// Extracted reusable slider (originally from AgentSettingsPanel).
+
+.as-slider {
+  position: relative;
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 999px;
+}
+
+.as-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}

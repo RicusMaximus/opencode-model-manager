@@ -1,0 +1,7 @@
+// ── Utilities: Display ──────────────────────────────────────────────────────
+// .flex and .grid live in their own partials to group with related utilities.
+
+.block        { display: block; }
+.inline-block { display: inline-block; }
+.inline       { display: inline; }
+.hidden       { display: none; }

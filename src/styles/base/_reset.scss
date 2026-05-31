@@ -1,0 +1,29 @@
+// ── Base: Reset ─────────────────────────────────────────────────────────────
+// Minimal modern reset + webkit scrollbar normalisation (from global.css).
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+// Webkit scrollbar theming (dark-UI defaults)
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+
+  &:hover {
+    background: var(--text-muted);
+  }
+}

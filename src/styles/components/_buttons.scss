@@ -1,0 +1,144 @@
+// ── Components: Buttons ─────────────────────────────────────────────────────
+
+// Deploy / create agent button (accent blue)
+.deploy-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--blue-bright);
+  color: var(--blue-btn-text);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    opacity 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+  transform: translateY(0);
+
+  &:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow:
+      0 2px 12px rgba(89, 166, 255, 0.35),
+      0 1px 3px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  &:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 1px 6px rgba(89, 166, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+// Filter / secondary button
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--border);
+  }
+}
+
+// Pull model button (accent blue, no border)
+.pull-model-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--blue-bright);
+  border-radius: 2px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue-btn-text);
+  cursor: pointer;
+  white-space: nowrap;
+  border: none;
+  transition:
+    opacity 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+  box-shadow:
+    0 2px 12px rgba(89, 166, 255, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+  &:hover {
+    opacity: 0.92;
+    box-shadow:
+      0 4px 20px rgba(89, 166, 255, 0.5),
+      0 2px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+
+  &:active {
+    box-shadow:
+      0 1px 6px rgba(89, 166, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+// Save button (green)
+.save-btn {
+  background: var(--green-save);
+  color: var(--green-save-text);
+  border-radius: 2px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  border: none;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    box-shadow 0.15s,
+    transform 0.1s;
+  box-shadow:
+    0 2px 8px rgba(38, 165, 64, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+  &:hover {
+    opacity: 0.92;
+    box-shadow:
+      0 3px 14px rgba(38, 165, 64, 0.5),
+      0 2px 5px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  &:active {
+    box-shadow:
+      0 1px 4px rgba(38, 165, 64, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+}

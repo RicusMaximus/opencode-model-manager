@@ -1,0 +1,101 @@
+// ── Components: Titlebar ────────────────────────────────────────────────────
+
+.titlebar {
+  height: var(--header-height);
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 16px;
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+  z-index: 1000;
+  box-shadow: var(--shadow-header);
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-app-name {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.titlebar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+}
+
+.titlebar-config-path {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titlebar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-browse-btn {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--bg-elevated);
+  }
+}
+
+.window-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.win-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: var(--bg-elevated);
+  }
+
+  &.close:hover {
+    background: #c0392b;
+  }
+
+  svg {
+    color: var(--blue-bright);
+    display: block;
+  }
+}

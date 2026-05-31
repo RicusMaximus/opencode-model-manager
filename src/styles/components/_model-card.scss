@@ -1,0 +1,169 @@
+// ── Components: Model Card ──────────────────────────────────────────────────
+// @keyframes perf-shimmer lives here alongside the rule that uses it (§7.4, rule 7).
+
+.model-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: color-mix(in srgb, var(--border) 60%, white);
+  }
+}
+
+.model-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.model-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.model-card-name {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-version-tag {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.model-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.model-stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-stat-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.model-stat-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.model-card-separator {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 0 -16px;
+}
+
+// Performance meter section
+.model-perf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-perf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.model-perf-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.model-perf-tps {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.model-perf-bar-bg {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: var(--shadow-bar);
+}
+
+.model-perf-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease, background 0.6s ease;
+}
+
+.model-perf-bar-skeleton {
+  height: 100%;
+  width: 100%;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-elevated) 0%,
+    var(--bg-workspace) 50%,
+    var(--bg-elevated) 100%
+  );
+  background-size: 200% 100%;
+  animation: perf-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes perf-shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.model-perf-footer {
+  display: flex;
+  align-items: center;
+}
+
+.model-perf-mode {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.model-perf-tier {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+}

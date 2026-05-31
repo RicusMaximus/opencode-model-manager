@@ -1,0 +1,49 @@
+// ── Utilities: Typography ───────────────────────────────────────────────────
+
+@use '../abstracts/maps' as m;
+@use '../abstracts/mixins' as mix;
+@use '../abstracts/variables' as v;
+
+// Text alignment
+.text-left    { text-align: left; }
+.text-center  { text-align: center; }
+.text-right   { text-align: right; }
+.text-justify { text-align: justify; }
+
+// Font sizes — looped over $font-sizes (10 classes)
+@each $key, $value in m.$font-sizes {
+  .text-#{$key} { font-size: $value; }
+}
+
+// Font weights — looped over $font-weights (5 classes)
+@each $key, $value in m.$font-weights {
+  .font-#{$key} { font-weight: $value; }
+}
+
+// Font families
+.font-sans { font-family: v.$font-sans; }
+.font-mono { font-family: v.$font-mono; }
+
+// Text transform
+.uppercase    { text-transform: uppercase; }
+.lowercase    { text-transform: lowercase; }
+.capitalize   { text-transform: capitalize; }
+.normal-case  { text-transform: none; }
+
+// Letter spacing — looped over $letter-spacings (4 classes)
+@each $key, $value in m.$letter-spacings {
+  .tracking-#{$key} { letter-spacing: $value; }
+}
+
+// Line height — looped over $line-heights (3 classes)
+@each $key, $value in m.$line-heights {
+  .leading-#{$key} { line-height: $value; }
+}
+
+// Single-line truncation
+.truncate {
+  @include mix.truncate;
+}
+
+// Nowrap
+.whitespace-nowrap { white-space: nowrap; }

@@ -1,0 +1,31 @@
+// ── Layout: Agent Grid ──────────────────────────────────────────────────────
+// Container-query rules are kept at the top level of this partial
+// (not nested inside a selector) to stay within the max-nesting-depth-3 rule.
+
+.agent-grid-shell {
+  container-type: inline-size;
+  container-name: agent-grid;
+  max-width: 1280px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+// Container queries — must stay at top level (§8, rule 4)
+@container agent-grid (min-width: 560px) {
+  .agent-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container agent-grid (min-width: 960px) {
+  .agent-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

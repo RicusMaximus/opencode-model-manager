@@ -1,0 +1,16 @@
+// ── Utilities: Barrel ───────────────────────────────────────────────────────
+// Order: spacing → colors → flex → grid → display → position → sizing →
+//        typography → radius → shadow → overflow → cursor
+
+@forward 'spacing';
+@forward 'colors';
+@forward 'flex';
+@forward 'grid';
+@forward 'display';
+@forward 'position';
+@forward 'sizing';
+@forward 'typography';
+@forward 'radius';
+@forward 'shadow';
+@forward 'overflow';
+@forward 'cursor';

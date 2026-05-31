@@ -1,0 +1,70 @@
+// ── Abstracts: Functions ────────────────────────────────────────────────────
+
+@use 'sass:map';
+@use 'sass:math';
+@use 'sass:meta';
+@use 'maps' as m;
+
+/// Look up a spacing value. Returns a rem value.
+/// @param {String} $key - Key in $spacing map (e.g. '4', '0-5')
+@function spacing($key) {
+  @if not map.has-key(m.$spacing, $key) {
+    @error "spacing(): Unknown key `#{$key}`. Available: #{map.keys(m.$spacing)}";
+  }
+  @return map.get(m.$spacing, $key);
+}
+
+/// Look up a color value.
+/// @param {String} $name - Key in $colors map
+/// @param {*} $shade [null] - Reserved for future tints/shades extension; must be null.
+@function color($name, $shade: null) {
+  @if not map.has-key(m.$colors, $name) {
+    @error "color(): Unknown color `#{$name}`. Available: #{map.keys(m.$colors)}";
+  }
+  @return map.get(m.$colors, $name);
+}
+
+/// Convert px to rem using a 16-px root.
+/// @param {Number} $px - Pixel value (unitless or with px unit)
+@function rem($px) {
+  @if meta.type-of($px) == 'number' and math.unit($px) == 'px' {
+    $px: math.div($px, 1px);
+  }
+  @return #{math.div($px, 16)}rem;
+}
+
+/// Look up a z-index value.
+/// @param {String} $layer - Key in $z-layers map
+@function z($layer) {
+  @if not map.has-key(m.$z-layers, $layer) {
+    @error "z(): Unknown layer `#{$layer}`. Available: #{map.keys(m.$z-layers)}";
+  }
+  @return map.get(m.$z-layers, $layer);
+}
+
+/// Look up a shadow value (returns a var(--shadow-…) reference).
+/// @param {String} $key - Key in $shadows map
+@function shadow($key) {
+  @if not map.has-key(m.$shadows, $key) {
+    @error "shadow(): Unknown key `#{$key}`. Available: #{map.keys(m.$shadows)}";
+  }
+  @return map.get(m.$shadows, $key);
+}
+
+/// Look up a border-radius value.
+/// @param {String} $key - Key in $radii map
+@function radius($key) {
+  @if not map.has-key(m.$radii, $key) {
+    @error "radius(): Unknown key `#{$key}`. Available: #{map.keys(m.$radii)}";
+  }
+  @return map.get(m.$radii, $key);
+}
+
+/// Internal helper used by the breakpoint() mixin.
+/// @param {String} $key - Key in $breakpoints map
+@function breakpoint-value($key) {
+  @if not map.has-key(m.$breakpoints, $key) {
+    @error "breakpoint-value(): Unknown breakpoint `#{$key}`. Available: #{map.keys(m.$breakpoints)}";
+  }
+  @return map.get(m.$breakpoints, $key);
+}

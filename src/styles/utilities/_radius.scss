@@ -1,0 +1,12 @@
+// ── Utilities: Border Radius ────────────────────────────────────────────────
+
+@use 'sass:map';
+@use '../abstracts/maps' as m;
+
+// Unsuffixed .rounded = 4px (md) for parity with current default usage
+.rounded { border-radius: map.get(m.$radii, 'md'); }
+
+// Named variants — looped over $radii (7 classes)
+@each $key, $value in m.$radii {
+  .rounded-#{$key} { border-radius: $value; }
+}

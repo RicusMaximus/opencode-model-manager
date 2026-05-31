@@ -1,0 +1,7 @@
+// ── Themes: Default ─────────────────────────────────────────────────────────
+// The current palette is dark-only. This partial is a hook for a future
+// :root[data-theme="light"] (or other) override. Ships as a no-op today.
+//
+// When adding a light theme, add:
+//   :root[data-theme="light"] { --bg-deep: …; … }
+// here, mirroring the full custom-property surface from base/_root.scss.

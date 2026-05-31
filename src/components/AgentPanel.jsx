@@ -9,7 +9,7 @@ function PlusIcon({ size = 14 }) {
   )
 }
 
-export default function AgentPanel({ agents, ollamaModels, onModelChange }) {
+export default function AgentPanel({ agents, ollamaModels, onModelChange, onOpenSettings, onCreateAgent }) {
   return (
     <div className="agent-panel">
       {/* Section header */}
@@ -20,7 +20,7 @@ export default function AgentPanel({ agents, ollamaModels, onModelChange }) {
             Configure the LLM orchestration for your current project pipeline.
           </p>
         </div>
-        <button className="deploy-btn" type="button">
+        <button className="deploy-btn" type="button" onClick={onCreateAgent}>
           <PlusIcon size={14} />
           Deploy Agent
         </button>
@@ -35,6 +35,7 @@ export default function AgentPanel({ agents, ollamaModels, onModelChange }) {
               agent={agent}
               ollamaModels={ollamaModels}
               onModelChange={onModelChange}
+              onOpenSettings={onOpenSettings}
             />
           ))}
         </div>

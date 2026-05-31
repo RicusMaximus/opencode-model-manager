@@ -1,0 +1,8 @@
+// ── Base: Typography ────────────────────────────────────────────────────────
+// Global body typography from global.css.
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

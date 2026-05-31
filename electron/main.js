@@ -219,8 +219,11 @@ ipcMain.handle('config:read', async () => {
   const agentConfig = parsed.agent || {}
   const agents = Object.entries(agentConfig).map(([id, cfg]) => {
     const extra = { ...cfg }
-    delete extra.model
-    delete extra.disable
+    // Remove all fields that are now explicitly handled so they don't double-write
+    for (const k of ['model', 'disable', 'mode', 'description', 'prompt',
+                     'maxTokens', 'maxSteps', 'options', 'tools', 'permission']) {
+      delete extra[k]
+    }
     const meta = agentMeta[id] || {}
 
     // Derive tool capabilities
@@ -235,16 +238,21 @@ ipcMain.handle('config:read', async () => {
 
     return {
       id,
-      displayName: meta.name || id,
-      description: meta.description || '',
-      version:     meta.version || '',
-      mode:        meta.mode || '',
+      displayName:      meta.name        || id,
+      description:      cfg.description  || meta.description || '',
+      version:          meta.version     || '',
+      mode:             cfg.mode         || meta.mode        || '',
       responsibilities: meta.responsibilities || [],
-      rules:       meta.rules || [],
-      tools,
-      model: cfg.model ?? null,
-      disabled: cfg.disable === true,
-      _extra: extra,
+      rules:            meta.rules || [],
+      tools:            cfg.tools      ?? {},
+      model:            cfg.model      ?? null,
+      prompt:           cfg.prompt     ?? null,
+      maxTokens:        cfg.maxTokens  ?? null,
+      maxSteps:         cfg.maxSteps   ?? null,
+      options:          cfg.options    ?? {},
+      permission:       cfg.permission ?? {},
+      disabled:         cfg.disable === true,
+      _extra:           extra,
     }
   })
 
@@ -274,15 +282,38 @@ ipcMain.handle('config:write', async (_event, { agents, defaultModel, ollamaProv
     schema = existing['$schema'] || schema
   } catch { /* use default */ }
 
-  // Build agent block — preserve _extra (e.g. permission)
+  // Build agent block — persist all schema fields
   const agentBlock = {}
   for (const a of agents) {
     if (a.disabled) {
       agentBlock[a.id] = { disable: true }
     } else {
       const entry = {}
-      if (a.model) entry.model = a.model
-      if (a._extra && Object.keys(a._extra).length > 0) Object.assign(entry, a._extra)
+      // Core identity / behaviour
+      if (a.mode)        entry.mode        = a.mode
+      if (a.model)       entry.model       = a.model
+      if (a.description) entry.description = a.description
+      if (a.prompt)      entry.prompt      = a.prompt
+      if (a.maxTokens != null) entry.maxTokens = a.maxTokens
+      if (a.maxSteps  != null) entry.maxSteps  = a.maxSteps
+      // Model options (temperature, topP, reasoningEffort, thinking)
+      if (a.options && Object.keys(a.options).length > 0) {
+        const opts = {}
+        for (const [k, v] of Object.entries(a.options)) {
+          if (v !== null && v !== undefined) opts[k] = v
+        }
+        if (Object.keys(opts).length > 0) entry.options = opts
+      }
+      // Tool overrides
+      if (a.tools && Object.keys(a.tools).length > 0) entry.tools = a.tools
+      // Permission overrides
+      if (a.permission && Object.keys(a.permission).length > 0) entry.permission = a.permission
+      // Any remaining extra fields not explicitly handled above
+      if (a._extra) {
+        for (const [k, v] of Object.entries(a._extra)) {
+          if (!(k in entry)) entry[k] = v
+        }
+      }
       agentBlock[a.id] = entry
     }
   }
@@ -303,6 +334,27 @@ ipcMain.handle('config:write', async (_event, { agents, defaultModel, ollamaProv
 
   await fs.writeFile(tmpPath, JSON.stringify(config, null, 2), 'utf8')
   await fs.rename(tmpPath, configPath)
+  return { success: true }
+})
+
+// ── Agent File Create ─────────────────────────────────────────────────────────
+// Writes a new {agentId}.agent.md to {configDir}/agents/ with frontmatter
+
+ipcMain.handle('agent:create-file', async (_event, { agentId, agentData }) => {
+  const configDir = await getConfigDir()
+  const agentsDir = path.join(configDir, 'agents')
+  await fs.mkdir(agentsDir, { recursive: true })
+
+  const lines = ['---']
+  if (agentData.name)        lines.push(`name: ${agentData.name}`)
+  if (agentData.description) lines.push(`description: ${agentData.description}`)
+  if (agentData.version)     lines.push(`version: ${agentData.version}`)
+  if (agentData.mode)        lines.push(`mode: ${agentData.mode}`)
+  lines.push('---')
+  if (agentData.prompt)      lines.push('', agentData.prompt)
+
+  const content = lines.join('\n')
+  await fs.writeFile(path.join(agentsDir, `${agentId}.agent.md`), content, 'utf8')
   return { success: true }
 })
 

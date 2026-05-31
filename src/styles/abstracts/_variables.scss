@@ -1,0 +1,73 @@
+// ── Abstracts: Variables ────────────────────────────────────────────────────
+// SCSS scalar mirrors of :root custom properties.
+// Component CSS continues to use var(--…) for runtime theming.
+// These scalars feed mixins, functions, and map construction.
+
+// Typography
+$font-sans: 'Inter', system-ui, sans-serif;
+$font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+// Background layers
+$bg-deep:      #0a0d14;
+$bg-base:      #0f1419;
+$bg-sidebar:   #171c21;
+$bg-card:      #1c2126;
+$bg-workspace: #262930;
+$bg-elevated:  #30353d;
+
+// Borders
+$border: #404752;
+
+// Text
+$text-muted:     #6b7280;
+$text-dim:       #8c919e;
+$text-secondary: #bfc7d4;
+$text-primary:   #dde3eb;
+
+// Accents
+$accent-blue:       #a3c9ff;
+$accent-green:      #66de70;
+$accent-yellow:     #fabf45;
+$accent-gold:       #d19921;
+$blue-bright:       #59a6ff;
+$green-save:        #26a540;
+$green-save-text:   #00330a;
+$blue-btn-text:     #00305c;
+$red-validator:     #940009;
+$red-danger:        #c0392b;
+
+// Layout sizing
+$header-height:           48px;
+$footer-height:           32px;
+$sidebar-left:            256px;
+$sidebar-right-agents:    288px;
+$sidebar-right-models:    320px;
+
+// Typography presets map (used by typography() mixin)
+$typography-presets: (
+  'title': (
+    font-family: $font-sans,
+    font-size:   32px,
+    font-weight: 600,
+    line-height: 1.2,
+  ),
+  'body': (
+    font-family: $font-sans,
+    font-size:   14px,
+    font-weight: 400,
+    line-height: 1.5,
+  ),
+  'mono-sm': (
+    font-family: $font-mono,
+    font-size:   12px,
+    font-weight: 400,
+    line-height: 1.5,
+  ),
+  'label-uppercase': (
+    font-family:     $font-sans,
+    font-size:       10px,
+    font-weight:     600,
+    text-transform:  uppercase,
+    letter-spacing:  0.08em,
+  ),
+);

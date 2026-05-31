@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getOllamaModelDetail: (modelName) =>
     ipcRenderer.invoke('ollama:get-model-detail', modelName),
 
+  // Agent file creation
+  createAgentFile: (agentId, agentData) => ipcRenderer.invoke('agent:create-file', { agentId, agentData }),
+
   // System info
   getSystemInfo: () => ipcRenderer.invoke('system:get-info'),
 })

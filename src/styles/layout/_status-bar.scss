@@ -1,0 +1,76 @@
+// ── Layout: Status Bar ──────────────────────────────────────────────────────
+
+.status-bar {
+  height: var(--footer-height);
+  background: var(--bg-deep);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-footer);
+  position: relative;
+  z-index: 5;
+}
+
+.status-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ollama-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ollama-indicator-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+
+  &.connected    { color: var(--accent-green); }
+  &.disconnected { color: #c0392b; }
+}
+
+.status-sep-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.ollama-version {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ollama-version-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.ollama-version-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.last-saved-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}

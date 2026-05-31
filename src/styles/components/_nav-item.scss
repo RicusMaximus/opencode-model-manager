@@ -1,0 +1,42 @@
+// ── Components: Nav Item ────────────────────────────────────────────────────
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  text-align: left;
+  width: 100%;
+
+  &:hover {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  &.active {
+    background: var(--bg-elevated);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+    box-shadow: 0 2px 10px rgba(89,166,255,0.12), inset 0 0 16px rgba(163,201,255,0.04);
+
+    .nav-icon {
+      color: var(--accent-blue);
+    }
+  }
+}
+
+.nav-icon {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}

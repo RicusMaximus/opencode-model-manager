@@ -1,0 +1,27 @@
+// ── Layout: Generic Panel Header ────────────────────────────────────────────
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.panel-header-text {}
+
+.panel-title {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.panel-subtitle {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}

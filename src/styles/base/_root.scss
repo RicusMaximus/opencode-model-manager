@@ -1,3 +1,10 @@
+// ── Base: Root ──────────────────────────────────────────────────────────────
+// Verbatim copy of variables.css :root block.
+// !! DO NOT EDIT THESE PROPERTY NAMES !!
+// JSX inline styles in RightSidebar.jsx and AgentSettingsPanel.jsx
+// reference these via var(--…) at runtime. Removing or renaming any
+// custom property here will silently break those inline styles.
+
 :root {
   /* Background layers */
   --bg-deep:        #0a0d14;

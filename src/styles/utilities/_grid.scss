@@ -1,0 +1,24 @@
+// ── Utilities: Grid ─────────────────────────────────────────────────────────
+// Gap utilities are defined in _flex.scss to avoid duplicate selectors.
+
+.grid { display: grid; }
+
+// grid-cols-{1..12}
+@for $i from 1 through 12 {
+  .grid-cols-#{$i} { grid-template-columns: repeat(#{$i}, minmax(0, 1fr)); }
+}
+
+// col-span-{1..12}
+@for $i from 1 through 12 {
+  .col-span-#{$i} { grid-column: span #{$i} / span #{$i}; }
+}
+
+// grid-rows-{1..6}
+@for $i from 1 through 6 {
+  .grid-rows-#{$i} { grid-template-rows: repeat(#{$i}, minmax(0, 1fr)); }
+}
+
+// row-span-{1..6}
+@for $i from 1 through 6 {
+  .row-span-#{$i} { grid-row: span #{$i} / span #{$i}; }
+}

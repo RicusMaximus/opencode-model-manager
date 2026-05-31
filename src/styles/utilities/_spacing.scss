@@ -1,0 +1,30 @@
+// ── Utilities: Spacing ──────────────────────────────────────────────────────
+// Generated via @each over $spacing (17 keys × 13 properties = 221 classes).
+
+@use '../abstracts/maps' as m;
+
+@each $key, $value in m.$spacing {
+  // All sides
+  .m-#{$key}  { margin: $value; }
+  .p-#{$key}  { padding: $value; }
+
+  // Individual sides — margin
+  .mt-#{$key} { margin-top: $value; }
+  .mr-#{$key} { margin-right: $value; }
+  .mb-#{$key} { margin-bottom: $value; }
+  .ml-#{$key} { margin-left: $value; }
+
+  // Axis — margin
+  .mx-#{$key} { margin-left: $value; margin-right: $value; }
+  .my-#{$key} { margin-top: $value; margin-bottom: $value; }
+
+  // Individual sides — padding
+  .pt-#{$key} { padding-top: $value; }
+  .pr-#{$key} { padding-right: $value; }
+  .pb-#{$key} { padding-bottom: $value; }
+  .pl-#{$key} { padding-left: $value; }
+
+  // Axis — padding
+  .px-#{$key} { padding-left: $value; padding-right: $value; }
+  .py-#{$key} { padding-top: $value; padding-bottom: $value; }
+}

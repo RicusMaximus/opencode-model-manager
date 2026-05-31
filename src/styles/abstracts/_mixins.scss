@@ -1,0 +1,124 @@
+// ── Abstracts: Mixins ───────────────────────────────────────────────────────
+
+@use 'functions' as f;
+@use 'variables' as v;
+
+/// Responsive min-width breakpoint.
+/// @param {String} $name - Key in $breakpoints (sm|md|lg|xl|2xl)
+@mixin breakpoint($name) {
+  @media (min-width: f.breakpoint-value($name)) {
+    @content;
+  }
+}
+
+/// One-liner flex container.
+/// @param {String} $direction [row]
+/// @param {String} $justify   [flex-start]
+/// @param {String} $align     [stretch]
+/// @param {*}      $gap       [0]
+@mixin flex($direction: row, $justify: flex-start, $align: stretch, $gap: 0) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+  @if $gap != 0 { gap: $gap; }
+}
+
+/// One-liner CSS grid.
+/// @param {Number} $cols - Number of equal columns
+/// @param {*}      $gap  [0]
+@mixin grid($cols, $gap: 0) {
+  display: grid;
+  grid-template-columns: repeat($cols, 1fr);
+  @if $gap != 0 { gap: $gap; }
+}
+
+/// Standard 2-px outer focus ring.
+/// @param {Color} $color [v.$accent-blue]
+@mixin focus-ring($color: v.$accent-blue) {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba($color, 0.35);
+}
+
+/// Single-line truncation with ellipsis.
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/// Visually hidden — accessible screen-reader helper.
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/// Variadic transition shorthand.
+/// Default property list = (background, color, border-color).
+/// @param {List} $props... - CSS property names to transition
+@mixin transition($props...) {
+  $list: ();
+  @if length($props) == 0 {
+    $props: background, color, border-color;
+  }
+  @each $p in $props {
+    $list: append($list, #{$p} 150ms ease, comma);
+  }
+  transition: $list;
+}
+
+/// Apply a typography preset from $typography-presets.
+/// @param {String} $preset - Key in $typography-presets
+@mixin typography($preset) {
+  @if not map-has-key(v.$typography-presets, $preset) {
+    @error "typography(): Unknown preset `#{$preset}`.";
+  }
+  $map: map-get(v.$typography-presets, $preset);
+  @each $prop, $val in $map {
+    #{$prop}: $val;
+  }
+}
+
+/// Strip browser button defaults.
+@mixin button-reset {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+/// Repeated card surface pattern.
+@mixin card-surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: f.radius('xl');
+  box-shadow: var(--shadow-card);
+}
+
+/// Webkit dark scrollbar (lifted from global.css).
+@mixin scrollbar-dark {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: var(--bg-base);
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+    &:hover { background: var(--text-muted); }
+  }
+}
