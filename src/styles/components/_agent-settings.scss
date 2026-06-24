@@ -511,11 +511,151 @@
   }
 }
 
+// ── Skill multi-select (inside the skill permission pattern block) ──────────
+.as-skill-ms {
+  position: relative;
+  align-self: stretch;
+}
+
+.as-skill-ms-trigger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 9px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+
+  svg { color: var(--accent-blue); flex-shrink: 0; }
+
+  &:hover { border-color: var(--accent-blue); }
+}
+
+.as-skill-ms-label {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.as-skill-ms-chevron {
+  font-size: 8px;
+  color: var(--text-muted);
+  transform: rotate(90deg);
+  transition: transform 0.12s;
+
+  &.open { transform: rotate(-90deg); }
+}
+
+.as-skill-ms-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.as-skill-ms-search {
+  font-size: 11.5px;
+  padding: 5px 8px;
+}
+
+.as-skill-ms-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.as-skill-ms-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.1s;
+
+  &:hover { background: var(--bg-card); }
+
+  &.is-on .as-skill-ms-name { color: var(--text-primary); }
+}
+
+.as-skill-ms-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--accent-blue);
+
+  .as-skill-ms-option.is-on & {
+    border-color: var(--accent-blue);
+    background: rgba(89, 166, 255, 0.12);
+  }
+}
+
+.as-skill-ms-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.as-skill-ms-id {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.as-skill-ms-empty {
+  padding: 8px 7px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .as-icon-btn--danger {
   &:hover {
     color: #e57373 !important;
     background: color-mix(in srgb, #c0392b 12%, transparent) !important;
   }
+}
+
+// ── Skills card ───────────────────────────────────────────────────────────
+.as-skills-empty {
+  margin: -8px 0 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+
+  code {
+    font-family: var(--font-mono);
+    color: var(--accent-blue);
+  }
+}
+
+.as-skill-id {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 // ── Dirty tag ─────────────────────────────────────────────────────────────
@@ -594,6 +734,16 @@
   border-radius: 6px;
   box-shadow: 0 8px 48px rgba(0,0,0,0.7);
   overflow: hidden;
+
+  &--wide {
+    max-width: 1280px;
+    max-height: 92vh;
+    min-height: 70vh;
+  }
+}
+
+.as-modal-error {
+  color: #e57373;
 }
 
 .as-modal-header {
@@ -653,6 +803,58 @@
   &::placeholder {
     color: var(--text-muted);
   }
+}
+
+// ── Syntax-highlighted .agent.md editor (react-simple-code-editor + Prism) ──
+.as-md-editor-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-deep);
+}
+
+.as-md-editor {
+  min-height: 100%;
+  color: var(--text-primary);
+  caret-color: var(--accent-blue);
+
+  textarea {
+    outline: none;
+  }
+
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  // Plain tokens / punctuation
+  .token.punctuation { color: var(--text-secondary); }
+  .token.comment     { color: var(--text-muted); font-style: italic; }
+
+  // Markdown — GitHub-flavored palette
+  .token.title,
+  .token.title .token.punctuation { color: #79c0ff; font-weight: 600; }
+  .token.bold        { color: #f0f6fc; font-weight: 700; }
+  .token.italic      { color: #f0f6fc; font-style: italic; }
+  .token.strike      { color: var(--text-muted); text-decoration: line-through; }
+  .token.list.punctuation { color: #ff7b72; }
+  .token.blockquote.punctuation { color: var(--text-muted); }
+  .token.hr.punctuation { color: var(--text-muted); }
+  .token.code,
+  .token.code-snippet { color: #a5d6ff; }
+  .token.url          { color: #58a6ff; }
+  .token.url .token.content { color: #a5d6ff; }
+  .token.url-reference,
+  .token.url .token.url { color: #79c0ff; }
+
+  // YAML frontmatter
+  .token.key,
+  .token.atrule      { color: #79c0ff; }
+  .token.string      { color: #a5d6ff; }
+  .token.number,
+  .token.boolean,
+  .token.null        { color: #f0883e; }
+  .token.tag,
+  .token.important    { color: #ff7b72; }
 }
 
 // ── Agent ID row (create mode only) ──────────────────────────────────────

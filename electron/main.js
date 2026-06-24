@@ -139,6 +139,50 @@ function parseAgentFile(content) {
   }
 }
 
+// Atomic write: temp file → rename, so a crash never leaves a half-written file.
+async function atomicWrite(filePath, content) {
+  const tmpPath = filePath + '.tmp'
+  await fs.writeFile(tmpPath, content, 'utf8')
+  await fs.rename(tmpPath, filePath)
+}
+
+// Parse a skill markdown file into { name, description }.
+// Supports YAML frontmatter (name/description) and falls back to the first
+// "# Heading" and the first non-empty paragraph below it.
+function parseSkillFile(content) {
+  let name = ''
+  let description = ''
+
+  const fmMatch = content.match(/^---\s*\n([\s\S]*?)\n---/)
+  let body = content
+  if (fmMatch) {
+    for (const line of fmMatch[1].split('\n')) {
+      const colonIdx = line.indexOf(':')
+      if (colonIdx === -1) continue
+      const key = line.slice(0, colonIdx).trim()
+      const val = line.slice(colonIdx + 1).trim().replace(/^["']|["']$/g, '')
+      if (key === 'name') name = val
+      else if (key === 'description') description = val
+    }
+    body = content.replace(/^---\s*\n[\s\S]*?\n---\s*\n?/, '')
+  }
+
+  if (!name) {
+    const h1 = body.match(/^#\s+(.+)$/m)
+    if (h1) name = h1[1].trim()
+  }
+  if (!description) {
+    // First non-empty, non-heading line
+    for (const line of body.split('\n')) {
+      const t = line.trim()
+      if (!t || t.startsWith('#') || t.startsWith('---')) continue
+      description = t.replace(/[*_`]/g, '')
+      break
+    }
+  }
+  return { name, description }
+}
+
 function httpRequest(options, body) {
   return new Promise((resolve, reject) => {
     const req = http.request(options, (res) => {
@@ -356,6 +400,97 @@ ipcMain.handle('agent:create-file', async (_event, { agentId, agentData }) => {
   const content = lines.join('\n')
   await fs.writeFile(path.join(agentsDir, `${agentId}.agent.md`), content, 'utf8')
   return { success: true }
+})
+
+// ── Agent File Read/Write (raw markdown) ──────────────────────────────────────
+// Reads/writes the full raw {agentId}.agent.md so the user can edit the agent's
+// markdown (frontmatter + body) exactly as it sits on disk.
+
+ipcMain.handle('agent:read-file', async (_event, agentId) => {
+  const configDir = await getConfigDir()
+  const filePath = path.join(configDir, 'agents', `${agentId}.agent.md`)
+  try {
+    const content = await fs.readFile(filePath, 'utf8')
+    return { exists: true, content, path: filePath }
+  } catch {
+    return { exists: false, content: '', path: filePath }
+  }
+})
+
+ipcMain.handle('agent:write-file', async (_event, { agentId, content }) => {
+  const configDir = await getConfigDir()
+  const agentsDir = path.join(configDir, 'agents')
+  await fs.mkdir(agentsDir, { recursive: true })
+  const filePath = path.join(agentsDir, `${agentId}.agent.md`)
+  try {
+    await atomicWrite(filePath, content ?? '')
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// ── Skills ────────────────────────────────────────────────────────────────────
+// Lists skills found in the config dir. Supports two layouts:
+//   <configDir>/skill(s)/<name>.md
+//   <configDir>/skill(s)/<name>/SKILL.md
+// Returns [{ id, name, description, path }].
+
+ipcMain.handle('skills:list', async () => {
+  const configDir = await getConfigDir()
+  const skills = []
+  const seen = new Set()
+
+  for (const dirName of ['skill', 'skills']) {
+    const skillsDir = path.join(configDir, dirName)
+    let entries
+    try {
+      entries = await fs.readdir(skillsDir, { withFileTypes: true })
+    } catch {
+      continue // directory doesn't exist
+    }
+
+    for (const entry of entries) {
+      let id = null
+      let filePath = null
+
+      if (entry.isFile() && entry.name.endsWith('.md')) {
+        id = entry.name.replace(/\.md$/, '')
+        filePath = path.join(skillsDir, entry.name)
+      } else if (entry.isDirectory()) {
+        // Look for SKILL.md (case-insensitive) or <dir>.md inside the folder
+        const subDir = path.join(skillsDir, entry.name)
+        try {
+          const subFiles = await fs.readdir(subDir)
+          const skillMd = subFiles.find((f) => /^skill\.md$/i.test(f))
+            || subFiles.find((f) => f === `${entry.name}.md`)
+            || subFiles.find((f) => f.endsWith('.md'))
+          if (skillMd) {
+            id = entry.name
+            filePath = path.join(subDir, skillMd)
+          }
+        } catch { /* skip */ }
+      }
+
+      if (!id || !filePath || seen.has(id)) continue
+      seen.add(id)
+
+      let meta = {}
+      try {
+        meta = parseSkillFile(await fs.readFile(filePath, 'utf8'))
+      } catch { /* unreadable */ }
+
+      skills.push({
+        id,
+        name: meta.name || id,
+        description: meta.description || '',
+        path: filePath,
+      })
+    }
+  }
+
+  skills.sort((a, b) => a.name.localeCompare(b.name))
+  return { skills }
 })
 
 // ── Ollama ────────────────────────────────────────────────────────────────────

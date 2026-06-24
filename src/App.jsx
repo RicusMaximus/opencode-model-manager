@@ -69,6 +69,7 @@ export default function App() {
     "anthropic/claude-sonnet-4-6"
   );
   const [ollamaProviderModels, setOllamaProviderModels] = useState({});
+  const [skills, setSkills] = useState([]);
   const [ollamaStatus, setOllamaStatus] = useState({
     connected: false,
     models: []
@@ -128,6 +129,12 @@ export default function App() {
         originalRef.current = JSON.stringify(agentList);
       })
       .catch(console.error);
+
+    // Load skills available in the config directory
+    api
+      .listSkills()
+      .then((data) => setSkills(data?.skills || []))
+      .catch(() => setSkills([]));
 
     // Poll Ollama every 10s
     const pollOllama = () => {
@@ -330,6 +337,7 @@ export default function App() {
             <AgentSettingsPanel
               agent={agents.find((a) => a.id === settingsAgentId) ?? agents[0]}
               ollamaModels={ollamaStatus.models}
+              skills={skills}
               onBack={() => setActiveView("agents")}
               onSave={handleAgentSettingsSave}
             />
@@ -338,6 +346,7 @@ export default function App() {
             <AgentSettingsPanel
               isNew={true}
               ollamaModels={ollamaStatus.models}
+              skills={skills}
               onBack={() => setActiveView("agents")}
               onSave={handleNewAgentSave}
             />

@@ -11,8 +11,10 @@
     "electron:build": "vite build && electron-builder"
   },
   "dependencies": {
+    "prismjs": "^1.30.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-simple-code-editor": "^0.14.1",
     "strip-json-comments": "^5.0.1",
     "systeminformation": "^5.22.11"
   },

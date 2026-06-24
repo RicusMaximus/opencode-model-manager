@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react'
 import ReactDOM from 'react-dom'
+import Editor from 'react-simple-code-editor'
+import Prism from 'prismjs'
+import 'prismjs/components/prism-yaml'
+import 'prismjs/components/prism-markdown'
 import ModelDropdown from './ModelDropdown.jsx'
+
+// Highlight an .agent.md file: YAML frontmatter block (if present) is tokenized
+// with the yaml grammar, the body with GitHub-flavored markdown.
+function highlightAgentMd(code) {
+  const fm = code.match(/^(---\r?\n[\s\S]*?\r?\n---)([\s\S]*)$/)
+  if (fm) {
+    const yaml = Prism.highlight(fm[1], Prism.languages.yaml, 'yaml')
+    const body = fm[2] ? Prism.highlight(fm[2], Prism.languages.markdown, 'markdown') : ''
+    return yaml + body
+  }
+  return Prism.highlight(code, Prism.languages.markdown, 'markdown')
+}
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -18,15 +34,6 @@ function CpuIcon({ size = 14 }) {
       <rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.3" />
       <rect x="5" y="5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.2" />
       <path d="M5 1V3M9 1V3M5 11V13M9 11V13M1 5H3M1 9H3M11 5H13M11 9H13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function TerminalIcon({ size = 14 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
-      <path d="M2 4L6 7L2 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M7.5 10H12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   )
 }
@@ -91,12 +98,39 @@ function TrashIcon({ size = 12 }) {
   )
 }
 
+function CheckIcon({ size = 10 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" fill="none">
+      <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function SaveIcon({ size = 13 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 13 13" fill="none">
       <path d="M2 2H9L11 4V11H2V2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
       <rect x="4" y="8" width="5" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.1" />
       <rect x="4" y="2" width="4" height="2.5" rx="0.5" stroke="currentColor" strokeWidth="1.1" />
+    </svg>
+  )
+}
+
+function FileTextIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <path d="M3 1.5H8L11 4.5V12.5H3V1.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M8 1.5V4.5H11" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M5 7H9M5 9.5H9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SkillIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <path d="M7 1L8.4 4.6L12 6L8.4 7.4L7 11L5.6 7.4L2 6L5.6 4.6L7 1Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M11.5 9.5L12 11L13 11.5L12 12L11.5 13.5L11 12L10 11.5L11 11L11.5 9.5Z" fill="currentColor" />
     </svg>
   )
 }
@@ -218,8 +252,73 @@ function PatternRow({ pattern, value, onChange, onDelete }) {
   )
 }
 
-/** Expandable block for object-valued permissions (bash, skill, external_directory) */
-function PatternBlock({ keyName, patterns, onChange }) {
+/** Multi-select of globally-defined skills. Toggling a skill on adds its id to
+ *  the permission map with an "allow" default; toggling off removes the entry. */
+function SkillMultiSelect({ options, selected, onToggle }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const wrapRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const q = query.toLowerCase().trim()
+  const filtered = options.filter((o) => !q || o.name.toLowerCase().includes(q) || o.id.toLowerCase().includes(q))
+  const selectedCount = options.reduce((n, o) => n + (selected.has(o.id) ? 1 : 0), 0)
+
+  return (
+    <div className="as-skill-ms" ref={wrapRef}>
+      <button type="button" className="as-skill-ms-trigger" onClick={() => setOpen((p) => !p)}>
+        <SkillIcon size={12} />
+        <span className="as-skill-ms-label">
+          {selectedCount > 0 ? `${selectedCount} skill${selectedCount !== 1 ? 's' : ''} selected` : 'Add from your skills…'}
+        </span>
+        <span className={`as-skill-ms-chevron${open ? ' open' : ''}`}>▶</span>
+      </button>
+      {open && (
+        <div className="as-skill-ms-menu">
+          <input
+            className="as-input as-skill-ms-search"
+            value={query}
+            placeholder="Search skills…"
+            onChange={(e) => setQuery(e.target.value)}
+            spellCheck={false}
+            autoFocus
+          />
+          <div className="as-skill-ms-list">
+            {filtered.length === 0 ? (
+              <div className="as-skill-ms-empty">No skills match.</div>
+            ) : (
+              filtered.map((o) => {
+                const on = selected.has(o.id)
+                return (
+                  <div
+                    key={o.id}
+                    className={`as-skill-ms-option${on ? ' is-on' : ''}`}
+                    onMouseDown={(e) => { e.preventDefault(); onToggle(o.id, !on) }}
+                  >
+                    <span className="as-skill-ms-check">{on && <CheckIcon size={10} />}</span>
+                    <span className="as-skill-ms-name">{o.name}</span>
+                    {o.name !== o.id && <span className="as-skill-ms-id">{o.id}</span>}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Expandable block for object-valued permissions (bash, skill, external_directory).
+ *  When `options` (a list of {id, name} skills) is supplied, a multi-select for
+ *  those globally-defined skills is shown alongside the free-form glob patterns. */
+function PatternBlock({ keyName, patterns, onChange, options }) {
   const [expanded, setExpanded] = useState(false)
   const entries = Object.entries(patterns || {})
 
@@ -242,6 +341,15 @@ function PatternBlock({ keyName, patterns, onChange }) {
     onChange(next)
   }
 
+  // Toggle a known skill id in/out of the map (used by the multi-select)
+  const selectedIds = new Set(Object.keys(patterns || {}))
+  const toggleSkill = (id, on) => {
+    const next = { ...patterns }
+    if (on) { if (!(id in next)) next[id] = 'allow' }
+    else { delete next[id] }
+    onChange(next)
+  }
+
   return (
     <div className="as-pattern-block">
       <button type="button" className="as-pattern-block-toggle" onClick={() => setExpanded((p) => !p)}>
@@ -251,6 +359,9 @@ function PatternBlock({ keyName, patterns, onChange }) {
       </button>
       {expanded && (
         <div className="as-pattern-block-body">
+          {options && options.length > 0 && (
+            <SkillMultiSelect options={options} selected={selectedIds} onToggle={toggleSkill} />
+          )}
           {entries.map(([k, v]) => (
             <PatternRow
               key={k}
@@ -269,58 +380,100 @@ function PatternBlock({ keyName, patterns, onChange }) {
   )
 }
 
-/** Markdown editor modal */
-function MarkdownEditorModal({ value, onSave, onClose }) {
-  const [text, setText] = useState(value ?? '')
-  const taRef = useRef(null)
+/** Raw .agent.md file editor modal. Loads the file from disk on open and
+ *  writes it straight back — independent of the opencode.jsonc save flow. */
+function AgentFileEditorModal({ agentId, onClose, onSaved }) {
+  const api = window.electronAPI
+  const [text, setText] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
+  // Load the raw file on mount
   useEffect(() => {
-    taRef.current?.focus()
-  }, [])
+    let cancelled = false
+    if (!api) { setLoading(false); return }
+    api.readAgentFile(agentId)
+      .then((res) => {
+        if (cancelled) return
+        setText(res?.content ?? '')
+        setLoading(false)
+        setTimeout(() => document.getElementById('agent-md-editor')?.focus(), 0)
+      })
+      .catch(() => { if (!cancelled) { setError('Could not read the agent file.'); setLoading(false) } })
+    return () => { cancelled = true }
+  }, [agentId])
 
-  // Close on Escape, save on Ctrl+S
+  const doSave = async () => {
+    if (!api || saving) return
+    setSaving(true)
+    setError('')
+    try {
+      const res = await api.writeAgentFile(agentId, text)
+      if (res?.success) {
+        onSaved?.()
+        onClose()
+      } else {
+        setError(res?.error || 'Failed to write the agent file.')
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to write the agent file.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Esc to close, Ctrl+S to save
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') onClose()
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault()
-        onSave(text)
-        onClose()
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); doSave() }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [text, onSave, onClose])
+  }, [text, saving])
 
   return (
     <div className="as-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="as-modal">
+      <div className="as-modal as-modal--wide">
         <div className="as-modal-header">
           <span className="as-modal-title">
-            <TerminalIcon size={14} /> System Prompt / Instructions
+            <FileTextIcon size={14} /> {agentId}.agent.md
           </span>
           <div className="as-modal-actions">
-            <button
-              type="button"
-              className="save-btn"
-              onClick={() => { onSave(text); onClose() }}
-            >
-              <SaveIcon size={12} /> Apply
+            <button type="button" className="save-btn" onClick={doSave} disabled={loading || saving}>
+              <SaveIcon size={12} /> {saving ? 'Saving…' : 'Save to disk'}
             </button>
             <button type="button" className="as-icon-btn" onClick={onClose} title="Close">
               <XIcon size={14} />
             </button>
           </div>
         </div>
-        <div className="as-modal-hint">Markdown supported · Ctrl+S to save · Esc to discard</div>
-        <textarea
-          ref={taRef}
-          className="as-modal-textarea"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          spellCheck={false}
-          placeholder="Enter system instructions or prompt…"
-        />
+        <div className="as-modal-hint">
+          Edits the raw markdown file on disk · Ctrl+S to save · Esc to discard
+          {error && <span className="as-modal-error"> · {error}</span>}
+        </div>
+        <div className="as-md-editor-scroll">
+          <Editor
+            value={loading ? 'Loading…' : text}
+            onValueChange={setText}
+            highlight={(code) => (loading ? code : highlightAgentMd(code))}
+            disabled={loading}
+            padding={16}
+            tabSize={2}
+            insertSpaces
+            textareaId="agent-md-editor"
+            className="as-md-editor"
+            spellCheck={false}
+            placeholder={'---\nname: my-agent\ndescription: …\n---\n\nSystem instructions…'}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12.5,
+              lineHeight: 1.6,
+              minHeight: '100%',
+            }}
+          />
+        </div>
       </div>
     </div>
   )
@@ -350,7 +503,6 @@ const PARAM_INFO = {
   mode:             'Controls how this agent is selected. "primary" is the main agent, "fallback" is used when the primary fails, and "subagent" is called as a tool by other agents.',
   model:            'The LLM used for this agent. Overrides the global default model. Leave unset to inherit the global model.',
   description:      'A short human-readable summary of what this agent does. Shown on the agent card in the overview.',
-  systemPrompt:     'The system-level instructions prepended to every conversation with this agent. Defines its persona, rules, and behaviour.',
   maxTokens:        'Maximum number of tokens the model can generate in a single response. Higher values allow longer outputs but increase cost and latency.',
   maxSteps:         'Maximum number of tool-call / reasoning steps the agent may take before it must produce a final answer. Prevents runaway loops.',
   temperature:      'Controls randomness. 0 = fully deterministic (same input → same output). 2 = highly creative / unpredictable. Most tasks work best between 0.5–1.0.',
@@ -390,7 +542,7 @@ const PERM_KEY_INFO = {
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave, isNew = false }) {
+export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], onBack, onSave, isNew = false }) {
   // In create mode use a sentinel so the useEffect doesn't reset us on first render
   const initDraft = isNew
     ? normalizeDraft({ ...NEW_AGENT_DEFAULTS })
@@ -401,7 +553,7 @@ export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave
   const [agentId, setAgentId] = useState('')
   const [agentIdError, setAgentIdError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
-  const [promptEditorOpen, setPromptEditorOpen] = useState(false)
+  const [fileEditorOpen, setFileEditorOpen] = useState(false)
   // Track which complex-perm keys to show as pattern blocks vs simple
   // In create mode use a non-matching sentinel so isDirty triggers immediately
   const originalJson = useRef(isNew ? '__new__' : JSON.stringify(agent ?? {}))
@@ -476,6 +628,23 @@ export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave
     d.permission = d.permission ?? {}
     if (!patterns || Object.keys(patterns).length === 0) delete d.permission[key]
     else d.permission[key] = patterns
+    return d
+  })
+
+  // Enable/disable a skill for this agent. A skill is "available" when it has an
+  // allow entry under permission.skill, with the `skill` tool turned on.
+  const setSkill = (skillId, enabled) => update((d) => {
+    d.permission = d.permission ?? {}
+    const skillMap = { ...(typeof d.permission.skill === 'object' && d.permission.skill !== null ? d.permission.skill : {}) }
+    if (enabled) {
+      skillMap[skillId] = 'allow'
+      d.tools = d.tools ?? {}
+      d.tools.skill = true
+    } else {
+      delete skillMap[skillId]
+    }
+    if (Object.keys(skillMap).length === 0) delete d.permission.skill
+    else d.permission.skill = skillMap
     return d
   })
 
@@ -656,29 +825,27 @@ export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave
             </div>
           </div>
 
-          {/* System Prompt */}
-          <div className="as-card as-card-flush">
-            <div className="as-card-header">
-              <div className="as-card-header-left">
-                <span className="as-icon"><TerminalIcon size={14} /></span>
-                System Prompt
-                <InfoTooltip text={PARAM_INFO.systemPrompt} />
+          {/* Agent Markdown file (edit mode only — needs an existing file) */}
+          {!isNew && (
+            <div className="as-card">
+              <div className="as-card-header">
+                <span className="as-icon"><FileTextIcon size={14} /></span>
+                Agent Markdown
+                <InfoTooltip text="Edit the raw .agent.md file on disk — frontmatter and body — exactly as it lives in your opencode agents folder. Saved directly to the file, separate from opencode.jsonc." />
               </div>
+              <p className="as-card-hint">
+                Edit <code>{agent.id}.agent.md</code> directly. Changes are written straight to the file in your agents folder.
+              </p>
               <button
                 type="button"
-                className="as-icon-btn"
-                aria-label="Edit system prompt"
-                onClick={() => setPromptEditorOpen(true)}
+                className="as-discard-btn"
+                style={{ alignSelf: 'flex-start' }}
+                onClick={() => setFileEditorOpen(true)}
               >
-                <PencilIcon size={14} />
+                <PencilIcon size={12} /> Edit markdown file
               </button>
             </div>
-            <pre className="as-instructions-body">
-              {draft.prompt?.trim()
-                ? draft.prompt
-                : <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No prompt set. Click the pencil to add one.</span>}
-            </pre>
-          </div>
+          )}
 
           {/* Parameters */}
           <div className="as-card">
@@ -866,6 +1033,46 @@ export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave
             </div>
           </div>
 
+          {/* Skills */}
+          <div className="as-card">
+            <div className="as-card-header">
+              <span className="as-icon"><SkillIcon size={14} /></span>
+              Skills
+              <InfoTooltip text="Skills discovered in your opencode config directory. Enable a skill to put it at this agent's disposal — it's allowed under permission.skill and the skill tool is turned on." />
+            </div>
+            <p className="as-card-hint">Select which skills from your config directory this agent can use.</p>
+            {skills.length === 0 ? (
+              <p className="as-skills-empty">
+                No skills found in your config directory. Add <code>*.md</code> files to a <code>skill/</code> or <code>skills/</code> folder.
+              </p>
+            ) : (
+              <div className="as-perm-list">
+                {skills.map((skill) => {
+                  const val = draft.permission?.skill?.[skill.id]
+                  const on = typeof val === 'string' && val !== 'deny'
+                  return (
+                    <div key={skill.id} className="as-perm-item">
+                      <div className="as-perm-text">
+                        <span className="as-perm-title">{skill.name}</span>
+                        {skill.description && <span className="as-perm-desc">{skill.description}</span>}
+                        {skill.name !== skill.id && <span className="as-skill-id">{skill.id}</span>}
+                      </div>
+                      <div
+                        className={`as-toggle${on ? ' is-on' : ''}`}
+                        role="switch"
+                        aria-checked={on}
+                        tabIndex={0}
+                        onClick={() => setSkill(skill.id, !on)}
+                        onKeyDown={(e) => e.key === ' ' || e.key === 'Enter' ? setSkill(skill.id, !on) : null}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Permissions */}
           <div className="as-card">
             <div className="as-card-header">
@@ -906,6 +1113,7 @@ export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave
                     keyName={key}
                     patterns={patterns}
                     onChange={(p) => setComplexPerm(key, p)}
+                    options={key === 'skill' ? skills : undefined}
                   />
                 )
               })}
@@ -941,12 +1149,11 @@ export default function AgentSettingsPanel({ agent, ollamaModels, onBack, onSave
         </div>
       )}
 
-      {/* ── Markdown editor modal ── */}
-      {promptEditorOpen && (
-        <MarkdownEditorModal
-          value={draft.prompt ?? ''}
-          onSave={(v) => setField('prompt', v)}
-          onClose={() => setPromptEditorOpen(false)}
+      {/* ── Raw .agent.md file editor modal ── */}
+      {fileEditorOpen && !isNew && (
+        <AgentFileEditorModal
+          agentId={agent.id}
+          onClose={() => setFileEditorOpen(false)}
         />
       )}
     </div>

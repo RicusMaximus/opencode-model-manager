@@ -23,6 +23,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Agent file creation
   createAgentFile: (agentId, agentData) => ipcRenderer.invoke('agent:create-file', { agentId, agentData }),
 
+  // Agent raw markdown read/write
+  readAgentFile: (agentId) => ipcRenderer.invoke('agent:read-file', agentId),
+  writeAgentFile: (agentId, content) => ipcRenderer.invoke('agent:write-file', { agentId, content }),
+
+  // Skills
+  listSkills: () => ipcRenderer.invoke('skills:list'),
+
   // System info
   getSystemInfo: () => ipcRenderer.invoke('system:get-info'),
 })
