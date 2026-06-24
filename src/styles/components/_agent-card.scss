@@ -72,6 +72,13 @@
   color: var(--text-secondary);
   margin-top: 2px;
   line-height: 1.5;
+
+  // Cap to ~3 lines, then truncate with an ellipsis
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
 }
 
 // Enhanced identity layout
