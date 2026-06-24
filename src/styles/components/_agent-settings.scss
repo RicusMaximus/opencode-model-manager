@@ -109,6 +109,38 @@
   }
 }
 
+// ── Model selector bar ─────────────────────────────────────────────────────
+// Sits between the page header and the two-column grid so the primary LLM
+// is the first thing visible when the agent edit page opens.
+
+.as-model-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.as-model-bar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.as-model-bar-dropdown {
+  flex: 1;
+  min-width: 0;
+}
+
 .as-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
@@ -877,6 +909,20 @@
   }
 }
 
+.as-field-hint--info {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.as-field-hint--warn {
+  color: var(--color-warning, #d19921);
+}
+
+.as-field-row--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .as-field-error {
   margin: 4px 0 0 0;
   font-family: var(--font-mono);
@@ -966,6 +1012,83 @@
     border-top-color: var(--bg-elevated);
     z-index: 1;
   }
+}
+
+// ── Color picker ────────────────────────────────────────────────────────────
+
+.as-color-field {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.as-color-swatches {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.as-color-swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 4px;
+  background: var(--swatch);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.as-color-swatch:hover {
+  transform: scale(1.08);
+}
+
+.as-color-swatch.is-active {
+  box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--swatch);
+}
+
+.as-color-custom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-base);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  transition: border-color 0.12s ease;
+}
+
+.as-color-custom:hover {
+  border-color: var(--accent-blue);
+}
+
+.as-color-custom.is-active {
+  border-color: var(--accent-blue);
+}
+
+.as-color-custom-chip {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+// Native color input sits invisibly over the label so the whole chip is clickable
+.as-color-custom-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 // Responsive — collapse to single column below 1100px

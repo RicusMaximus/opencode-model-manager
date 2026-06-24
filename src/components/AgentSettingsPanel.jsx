@@ -5,6 +5,8 @@ import Prism from 'prismjs'
 import 'prismjs/components/prism-yaml'
 import 'prismjs/components/prism-markdown'
 import ModelDropdown from './ModelDropdown.jsx'
+import { resolveReasoningCapability } from '../data/reasoningCapabilities.js'
+import { applyAgentDefaults } from '../data/agentDefaults.js'
 
 // Highlight an .agent.md file: YAML frontmatter block (if present) is tokenized
 // with the yaml grammar, the body with GitHub-flavored markdown.
@@ -198,6 +200,7 @@ function normalizeDraft(draft) {
   if (!draft.tools)     draft.tools      = {}
   if (!draft.permission) draft.permission = {}
   if (draft.options.thinking == null) draft.options.thinking = null
+  if (draft.variant == null) draft.variant = null
   return draft
 }
 
@@ -479,18 +482,30 @@ function AgentFileEditorModal({ agentId, onClose, onSaved }) {
   )
 }
 
-// Default draft for new agents
+// Identity fields for a new agent. All other config items (maxTokens, maxSteps,
+// options, tools, permission, reasoning effort) are back-filled by
+// applyAgentDefaults so the create form opens pre-populated with the same
+// defaults that existing agents are migrated to.
 const NEW_AGENT_DEFAULTS = {
   mode: 'subagent',
   model: null,
   description: '',
   prompt: '',
-  maxTokens: 8000,
-  maxSteps: 45,
-  options: {},
-  tools: {},
-  permission: {},
+  color: '#59a6ff',
 }
+
+// Preset accent colors for the agent card square. Users can also pick any custom
+// color via the native color input.
+const AGENT_COLORS = [
+  '#59a6ff', // blue
+  '#26a540', // green
+  '#d19921', // gold
+  '#940009', // red
+  '#404752', // slate
+  '#9b59b6', // purple
+  '#e0613a', // orange
+  '#1abc9c', // teal
+]
 
 // Validate agent ID slug: lowercase letters, numbers, hyphens only
 function isValidSlug(slug) {
@@ -503,11 +518,12 @@ const PARAM_INFO = {
   mode:             'Controls how this agent is selected. "primary" is the main agent, "fallback" is used when the primary fails, and "subagent" is called as a tool by other agents.',
   model:            'The LLM used for this agent. Overrides the global default model. Leave unset to inherit the global model.',
   description:      'A short human-readable summary of what this agent does. Shown on the agent card in the overview.',
+  color:            'The accent color shown on this agent’s square in the overview grid. Pick a preset or choose a custom color.',
   maxTokens:        'Maximum number of tokens the model can generate in a single response. Higher values allow longer outputs but increase cost and latency.',
   maxSteps:         'Maximum number of tool-call / reasoning steps the agent may take before it must produce a final answer. Prevents runaway loops.',
   temperature:      'Controls randomness. 0 = fully deterministic (same input → same output). 2 = highly creative / unpredictable. Most tasks work best between 0.5–1.0.',
   topP:             'Nucleus sampling threshold. The model considers only the smallest set of tokens whose cumulative probability ≥ Top P. 1.0 = disabled. Lower values (e.g. 0.9) make output more focused.',
-  reasoningEffort:  'For reasoning models (e.g. o1, o3). Controls how much compute is spent on internal reasoning before answering. Higher effort = better accuracy at more cost.',
+  reasoningEffort:  'Controls how much reasoning the model does before answering. Available levels depend on the selected model — Opus 4.8 supports up to "xhigh"/"max", Sonnet 4.6 up to "max". For OpenAI o-series, maps to options.reasoningEffort. Not all models support this; the control disables automatically for non-reasoning models.',
   extendedThinking: "Enables Claude's extended thinking mode, where the model reasons step-by-step internally before responding. Requires a compatible Claude model.",
   thinkingBudget:   'Maximum number of tokens Claude may use for internal reasoning (thinking tokens). Does not count toward the output token limit.',
   toolOverrides:    'Explicitly enable or disable individual built-in tools for this agent. Overrides the global tool configuration.',
@@ -540,12 +556,45 @@ const PERM_KEY_INFO = {
   websearch:        'Permission to perform web searches.',
 }
 
+/** Accent-color picker: preset swatches + a native custom color input. */
+function ColorField({ value, onChange }) {
+  const current = value || '#404752'
+  const isPreset = AGENT_COLORS.some((c) => c.toLowerCase() === current.toLowerCase())
+  return (
+    <div className="as-color-field">
+      <div className="as-color-swatches">
+        {AGENT_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            className={`as-color-swatch${current.toLowerCase() === c.toLowerCase() ? ' is-active' : ''}`}
+            style={{ '--swatch': c }}
+            onClick={() => onChange(c)}
+            aria-label={`Set color ${c}`}
+            title={c}
+          />
+        ))}
+      </div>
+      <label className={`as-color-custom${!isPreset ? ' is-active' : ''}`} title="Custom color">
+        <span className="as-color-custom-chip" style={{ background: current }} />
+        <span className="as-color-custom-label">{isPreset ? 'Custom…' : current}</span>
+        <input
+          type="color"
+          className="as-color-custom-input"
+          value={current}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </label>
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], onBack, onSave, isNew = false }) {
   // In create mode use a sentinel so the useEffect doesn't reset us on first render
   const initDraft = isNew
-    ? normalizeDraft({ ...NEW_AGENT_DEFAULTS })
+    ? normalizeDraft(applyAgentDefaults({ ...NEW_AGENT_DEFAULTS }))
     : normalizeDraft(cloneAgent(agent ?? {}))
 
   const [draft, setDraft] = useState(() => initDraft)
@@ -554,6 +603,9 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
   const [agentIdError, setAgentIdError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
   const [fileEditorOpen, setFileEditorOpen] = useState(false)
+  // Ollama runtime capabilities for the selected model
+  const [ollamaCapabilities, setOllamaCapabilities] = useState(null)
+  const [ollamaCapLoading, setOllamaCapLoading] = useState(false)
   // Track which complex-perm keys to show as pattern blocks vs simple
   // In create mode use a non-matching sentinel so isDirty triggers immediately
   const originalJson = useRef(isNew ? '__new__' : JSON.stringify(agent ?? {}))
@@ -567,6 +619,73 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
     setIsDirty(false)
     originalJson.current = JSON.stringify(agent ?? {})
   }, [agent?.id, isNew])
+
+  // Fetch Ollama model capabilities when an Ollama model is selected
+  useEffect(() => {
+    const api = window.electronAPI
+    if (!api || !draft.model?.startsWith('ollama/')) {
+      setOllamaCapabilities(null)
+      return
+    }
+    const modelName = draft.model.replace(/^ollama\//, '')
+    let cancelled = false
+    setOllamaCapLoading(true)
+    api.getOllamaModelDetail(modelName)
+      .then((res) => {
+        if (cancelled) return
+        setOllamaCapabilities(res?.capabilities ?? [])
+        setOllamaCapLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setOllamaCapabilities([])
+        setOllamaCapLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [draft.model])
+
+  // Resolve reasoning capability for the selected model (must be before early return)
+  const reasoningCap = React.useMemo(
+    () => resolveReasoningCapability(draft.model, ollamaCapabilities),
+    [draft.model, ollamaCapabilities]
+  )
+
+  // When the model changes, reconcile the stored reasoning value
+  // to ensure the saved config is always valid for the selected model.
+  // Uses setDraft directly (stable setter) since mutators are defined after early return.
+  useEffect(() => {
+    if (!draft.model) return // no model selected yet
+
+    setDraft((prev) => {
+      const d = cloneAgent(prev)
+      if (reasoningCap.mechanism === 'variant') {
+        // Clear variant if it's not in the new levels
+        if (d.variant && !reasoningCap.levels.includes(d.variant)) {
+          d.variant = null
+        }
+        // Clear any legacy options.reasoningEffort (wrong field for Anthropic)
+        if (d.options?.reasoningEffort != null) {
+          delete d.options.reasoningEffort
+        }
+      } else if (reasoningCap.mechanism === 'reasoningEffort') {
+        // Clear reasoningEffort if it's not in the new levels
+        if (d.options?.reasoningEffort && !reasoningCap.levels.includes(d.options.reasoningEffort)) {
+          delete d.options.reasoningEffort
+        }
+        // Clear variant (wrong field for OpenAI)
+        if (d.variant != null) {
+          d.variant = null
+        }
+      } else {
+        // mechanism is 'thinking' or 'none' — clear both effort fields
+        if (d.options?.reasoningEffort != null) delete d.options.reasoningEffort
+        if (d.variant != null) d.variant = null
+      }
+      // NOTE: We intentionally do NOT clear options.thinking here — the Extended
+      // Thinking toggle is separate and manages itself.
+      return d
+    })
+  }, [reasoningCap.mechanism, reasoningCap.levels.join(','), draft.model])
 
   if (!isNew && !agent) {
     return (
@@ -594,6 +713,15 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
       delete d.options[key]
     } else {
       d.options[key] = value
+    }
+    return d
+  })
+
+  const setVariant = (value) => update((d) => {
+    if (value === '' || value === null || value === undefined) {
+      d.variant = null
+    } else {
+      d.variant = value
     }
     return d
   })
@@ -669,6 +797,13 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
   const modelKind = getModelKind(draft.model)
   const thinkingEnabled = !!draft.options?.thinking
 
+  // Detect a load-time mismatch: existing config has a reasoningEffort value for
+  // an Anthropic model (where 'variant' is the correct field, not options.reasoningEffort)
+  const hasLegacyReasoningEffort = (
+    reasoningCap.mechanism === 'variant' &&
+    draft.options?.reasoningEffort != null
+  )
+
   // Separate simple vs complex permissions currently in draft
   const permEntries = Object.entries(draft.permission ?? {})
   const simplePerms = permEntries.filter(([, v]) => typeof v === 'string')
@@ -715,6 +850,22 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
             {modelKind && <span className="as-tag">{modelKind}</span>}
             {!isNew && isDirty && <span className="as-tag as-tag--dirty">UNSAVED</span>}
           </div>
+        </div>
+      </div>
+
+      {/* ── Model selector bar ── always visible at the top of the edit page ── */}
+      <div className="as-model-bar">
+        <span className="as-model-bar-label">
+          <CpuIcon size={13} />
+          Model
+          <InfoTooltip text={PARAM_INFO.model} />
+        </span>
+        <div className="as-model-bar-dropdown">
+          <ModelDropdown
+            value={draft.model}
+            ollamaModels={ollamaModels}
+            onChange={(v) => setField('model', v)}
+          />
         </div>
       </div>
 
@@ -796,19 +947,6 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
               </div>
             </div>
 
-            {/* Model */}
-            <div className="as-field-row">
-              <div className="as-label-row">
-                <span className="as-label">Primary LLM</span>
-                <InfoTooltip text={PARAM_INFO.model} />
-              </div>
-              <ModelDropdown
-                value={draft.model}
-                ollamaModels={ollamaModels}
-                onChange={(v) => setField('model', v)}
-              />
-            </div>
-
             {/* Description */}
             <div className="as-field-row">
               <div className="as-label-row">
@@ -821,6 +959,18 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
                 placeholder="Short description of this agent's role…"
                 onChange={(e) => setField('description', e.target.value)}
                 spellCheck={false}
+              />
+            </div>
+
+            {/* Color */}
+            <div className="as-field-row">
+              <div className="as-label-row">
+                <span className="as-label">Color</span>
+                <InfoTooltip text={PARAM_INFO.color} />
+              </div>
+              <ColorField
+                value={draft.color}
+                onChange={(c) => setField('color', c)}
               />
             </div>
           </div>
@@ -934,63 +1084,128 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
               <div className="as-range-labels"><span>0</span><span>1</span></div>
             </div>
 
-            {/* Reasoning effort (for o-series / reasoning models) */}
-            <div className="as-field-row">
+            {/* Reasoning Effort — model-aware dynamic control */}
+            <div className={`as-field-row${reasoningCap.mechanism === 'none' ? ' as-field-row--disabled' : ''}`}>
               <div className="as-label-row">
                 <span className="as-label">Reasoning Effort</span>
                 <InfoTooltip text={PARAM_INFO.reasoningEffort} />
               </div>
-              <div className="as-seg-group">
-                {[null, 'low', 'medium', 'high'].map((v) => (
-                  <button
-                    key={String(v)}
-                    type="button"
-                    className={`as-seg-btn${(draft.options?.reasoningEffort ?? null) === v ? ' is-active' : ''}`}
-                    onClick={() => setOption('reasoningEffort', v)}
-                  >
-                    {v ?? 'off'}
-                  </button>
-                ))}
-              </div>
+
+              {reasoningCap.mechanism === 'thinking' ? (
+                /* Local model with thinking capability — effort tiers don't apply */
+                <p className="as-field-hint as-field-hint--info">
+                  This model uses Extended Thinking instead of effort tiers. Use the toggle below.
+                </p>
+              ) : reasoningCap.mechanism === 'none' ? (
+                /* Non-reasoning model */
+                <p className="as-field-hint">
+                  {ollamaCapLoading
+                    ? 'Detecting model capabilities…'
+                    : 'The selected model does not support reasoning effort.'}
+                </p>
+              ) : (
+                /* variant or reasoningEffort — show dynamic segmented control */
+                <>
+                  <div className="as-seg-group">
+                    {/* "off" button */}
+                    <button
+                      key="off"
+                      type="button"
+                      className={`as-seg-btn${
+                        (reasoningCap.mechanism === 'variant'
+                          ? draft.variant
+                          : draft.options?.reasoningEffort) == null
+                          ? ' is-active'
+                          : ''
+                      }`}
+                      onClick={() => {
+                        if (reasoningCap.mechanism === 'variant') setVariant(null)
+                        else setOption('reasoningEffort', null)
+                      }}
+                    >
+                      off
+                    </button>
+                    {/* Dynamic level buttons */}
+                    {reasoningCap.levels.map((level) => {
+                      const currentVal = reasoningCap.mechanism === 'variant'
+                        ? draft.variant
+                        : draft.options?.reasoningEffort
+                      return (
+                        <button
+                          key={level}
+                          type="button"
+                          className={`as-seg-btn${currentVal === level ? ' is-active' : ''}`}
+                          onClick={() => {
+                            if (reasoningCap.mechanism === 'variant') setVariant(level)
+                            else setOption('reasoningEffort', level)
+                          }}
+                        >
+                          {level}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {/* Source hint in small text */}
+                  {reasoningCap.source !== 'registry-id' && (
+                    <p className="as-field-hint" style={{ fontSize: '11px', marginTop: '4px', opacity: 0.65 }}>
+                      {reasoningCap.source === 'registry-family' ? 'Levels inferred from model family.' :
+                       reasoningCap.source === 'registry-provider' ? 'Provider default levels.' :
+                       'Fallback levels — model not in registry.'}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
-            {/* Extended Thinking toggle */}
-            <div className="as-perm-item">
-              <div className="as-perm-text">
-                <span className="as-perm-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  Extended Thinking
-                  <InfoTooltip text={PARAM_INFO.extendedThinking} />
-                </span>
-                <span className="as-perm-desc">Claude extended thinking (budgetTokens)</span>
+            {/* Load-time mismatch warning: existing config wrote reasoningEffort for an Anthropic model */}
+            {hasLegacyReasoningEffort && (
+              <div className="as-field-hint as-field-hint--warn" style={{ fontSize: '11px', marginTop: '-8px' }}>
+                ⚠ This agent has a legacy <code>options.reasoningEffort</code> value which is ignored by Anthropic.
+                Select a level above and save to migrate to the correct <code>variant</code> field.
               </div>
-              <div
-                className={`as-toggle${thinkingEnabled ? ' is-on' : ''}`}
-                role="switch"
-                aria-checked={thinkingEnabled}
-                tabIndex={0}
-                onClick={() => setThinking(!thinkingEnabled)}
-                onKeyDown={(e) => e.key === ' ' || e.key === 'Enter' ? setThinking(!thinkingEnabled) : null}
-                style={{ cursor: 'pointer' }}
-              />
-            </div>
-            {thinkingEnabled && (
-              <div className="as-param-row">
-                <div className="as-param-row-header">
-                  <span className="as-label-row">
-                    <span className="as-label">Thinking Budget (tokens)</span>
-                    <InfoTooltip text={PARAM_INFO.thinkingBudget} />
-                  </span>
-                  <span className="as-param-value">{draft.options.thinking?.budgetTokens ?? 8000}</span>
+            )}
+
+            {/* Extended Thinking toggle — hidden for Anthropic adaptive-thinking models */}
+            {reasoningCap.mechanism !== 'variant' && (
+              <>
+                <div className="as-perm-item">
+                  <div className="as-perm-text">
+                    <span className="as-perm-title" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      Extended Thinking
+                      <InfoTooltip text={PARAM_INFO.extendedThinking} />
+                    </span>
+                    <span className="as-perm-desc">Claude extended thinking (budgetTokens)</span>
+                  </div>
+                  <div
+                    className={`as-toggle${thinkingEnabled ? ' is-on' : ''}`}
+                    role="switch"
+                    aria-checked={thinkingEnabled}
+                    tabIndex={0}
+                    onClick={() => setThinking(!thinkingEnabled)}
+                    onKeyDown={(e) => e.key === ' ' || e.key === 'Enter' ? setThinking(!thinkingEnabled) : null}
+                    style={{ cursor: 'pointer' }}
+                  />
                 </div>
-                <input
-                  type="range"
-                  className="as-range-input"
-                  min={1000} max={32000} step={1000}
-                  value={draft.options.thinking?.budgetTokens ?? 8000}
-                  onChange={(e) => setThinkingBudget(e.target.value)}
-                />
-                <div className="as-range-labels"><span>1k</span><span>32k</span></div>
-              </div>
+                {thinkingEnabled && (
+                  <div className="as-param-row">
+                    <div className="as-param-row-header">
+                      <span className="as-label-row">
+                        <span className="as-label">Thinking Budget (tokens)</span>
+                        <InfoTooltip text={PARAM_INFO.thinkingBudget} />
+                      </span>
+                      <span className="as-param-value">{draft.options.thinking?.budgetTokens ?? 8000}</span>
+                    </div>
+                    <input
+                      type="range"
+                      className="as-range-input"
+                      min={1000} max={32000} step={1000}
+                      value={draft.options.thinking?.budgetTokens ?? 8000}
+                      onChange={(e) => setThinkingBudget(e.target.value)}
+                    />
+                    <div className="as-range-labels"><span>1k</span><span>32k</span></div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

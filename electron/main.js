@@ -265,7 +265,7 @@ ipcMain.handle('config:read', async () => {
     const extra = { ...cfg }
     // Remove all fields that are now explicitly handled so they don't double-write
     for (const k of ['model', 'disable', 'mode', 'description', 'prompt',
-                     'maxTokens', 'maxSteps', 'options', 'tools', 'permission']) {
+                     'maxTokens', 'maxSteps', 'options', 'tools', 'permission', 'variant', 'color']) {
       delete extra[k]
     }
     const meta = agentMeta[id] || {}
@@ -290,6 +290,8 @@ ipcMain.handle('config:read', async () => {
       rules:            meta.rules || [],
       tools:            cfg.tools      ?? {},
       model:            cfg.model      ?? null,
+      variant:          cfg.variant    ?? null,
+      color:            cfg.color      ?? null,
       prompt:           cfg.prompt     ?? null,
       maxTokens:        cfg.maxTokens  ?? null,
       maxSteps:         cfg.maxSteps   ?? null,
@@ -340,6 +342,9 @@ ipcMain.handle('config:write', async (_event, { agents, defaultModel, ollamaProv
       if (a.prompt)      entry.prompt      = a.prompt
       if (a.maxTokens != null) entry.maxTokens = a.maxTokens
       if (a.maxSteps  != null) entry.maxSteps  = a.maxSteps
+      if (a.variant) entry.variant = a.variant
+      // UI-only metadata: the accent colour shown on the agent card in the overview
+      if (a.color) entry.color = a.color
       // Model options (temperature, topP, reasoningEffort, thinking)
       if (a.options && Object.keys(a.options).length > 0) {
         const opts = {}
@@ -517,9 +522,11 @@ ipcMain.handle('ollama:get-model-detail', async (_event, modelName) => {
     const ctxLength = result.model_info?.['llama.context_length']
       ?? result.model_info?.['phi3.context_length']
       ?? null
-    return { success: true, contextLength: ctxLength }
+    // capabilities is an array of strings e.g. ["completion", "thinking", "tools"]
+    const capabilitiesArray = result.capabilities ?? []
+    return { success: true, contextLength: ctxLength, capabilities: capabilitiesArray }
   } catch {
-    return { success: false }
+    return { success: false, capabilities: [] }
   }
 })
 

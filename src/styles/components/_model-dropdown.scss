@@ -86,14 +86,15 @@
 
 .model-dropdown-menu {
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 4px;
   z-index: 100;
-  max-height: 280px;
+  // ~7 option rows (≈33px each) visible at once, plus room for section headers
+  max-height: 360px;
   overflow-y: auto;
   box-shadow: var(--shadow-dropdown);
 }

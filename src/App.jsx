@@ -6,6 +6,7 @@ import AgentSettingsPanel from "./components/AgentSettingsPanel.jsx";
 import OllamaPanel from "./components/OllamaPanel.jsx";
 import RightSidebar from "./components/RightSidebar.jsx";
 import StatusBar from "./components/StatusBar.jsx";
+import { applyAgentDefaults } from "./data/agentDefaults.js";
 
 const api = window.electronAPI;
 
@@ -104,7 +105,8 @@ export default function App() {
           .filter((a) => !a.disabled) // hide disabled built-in agents
           .map((a) => ({
             ...a,
-            color: getAgentColor(a.id),
+            // Persisted per-agent color wins; fall back to the hardcoded palette.
+            color: a.color || getAgentColor(a.id),
             displayName:
               a.displayName || AGENT_META[a.id]?.fallbackName || a.id,
             description: a.description || AGENT_META[a.id]?.fallbackDesc || ""
@@ -125,8 +127,16 @@ export default function App() {
                 color: meta.color
               }));
 
-        setAgents(agentList);
-        originalRef.current = JSON.stringify(agentList);
+        // Back-fill every manageable config item with its default value.
+        // Non-destructive: existing values win. The pre-migration list is kept as
+        // the dirty-check baseline so any newly-filled defaults surface as unsaved
+        // changes for the user to review and Save.
+        const migrated = agentList.map(applyAgentDefaults);
+        const baselineJson = JSON.stringify(agentList);
+
+        setAgents(migrated);
+        originalRef.current = baselineJson;
+        setIsDirty(JSON.stringify(migrated) !== baselineJson);
       })
       .catch(console.error);
 
@@ -213,8 +223,10 @@ export default function App() {
         prompt: draft.prompt || '',
       });
 
-      // 2. Build the new agent entry to add to state
-      const newAgent = {
+      // 2. Build the new agent entry to add to state, back-filling any field the
+      //    create form left unset with its default value (same migration applied
+      //    to existing agents on load).
+      const newAgent = applyAgentDefaults({
         id: agentId,
         displayName: draft.name || agentId,
         description: draft.description || '',
@@ -229,10 +241,11 @@ export default function App() {
         permission: draft.permission ?? {},
         disabled: false,
         _extra: {},
-        color: getAgentColor(agentId), // uses AGENT_META color or default #404752
+        // User-picked color from the form; falls back to the palette default.
+        color: draft.color || getAgentColor(agentId),
         responsibilities: [],
         rules: [],
-      };
+      });
 
       // 3. Merge into agents state and persist to opencode.jsonc
       setAgents((prev) => {

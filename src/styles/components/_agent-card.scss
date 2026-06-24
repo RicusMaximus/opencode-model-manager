@@ -21,6 +21,13 @@
     box-shadow: var(--shadow-card-hover);
     border-color: color-mix(in srgb, var(--border) 60%, white);
   }
+
+  // When the model dropdown is open, let its menu escape the card's clipping
+  // and lift the whole card above its neighbours so the menu paints on top.
+  &:has(.model-dropdown-menu) {
+    overflow: visible;
+    z-index: 50;
+  }
 }
 
 .agent-card-top {

@@ -1,15 +1,26 @@
-import React from 'react'
-import AgentCard from './AgentCard.jsx'
+import React from "react";
+import AgentCard from "./AgentCard.jsx";
 
 function PlusIcon({ size = 14 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
-      <path d="M7 2V12M2 7H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M7 2V12M2 7H12"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
-  )
+  );
 }
 
-export default function AgentPanel({ agents, ollamaModels, onModelChange, onOpenSettings, onCreateAgent }) {
+export default function AgentPanel({
+  agents,
+  ollamaModels,
+  onModelChange,
+  onOpenSettings,
+  onCreateAgent
+}) {
   return (
     <div className="agent-panel">
       {/* Section header */}
@@ -22,7 +33,7 @@ export default function AgentPanel({ agents, ollamaModels, onModelChange, onOpen
         </div>
         <button className="deploy-btn" type="button" onClick={onCreateAgent}>
           <PlusIcon size={14} />
-          Deploy Agent
+          New Agent
         </button>
       </div>
 
@@ -41,5 +52,5 @@ export default function AgentPanel({ agents, ollamaModels, onModelChange, onOpen
         </div>
       </div>
     </div>
-  )
+  );
 }

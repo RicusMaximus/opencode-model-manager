@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 
 const CLOUD_MODELS = [
+  { id: 'anthropic/claude-opus-4-8',   name: 'Claude Opus 4.8',   provider: 'anthropic' },
   { id: 'anthropic/claude-opus-4-7',   name: 'Claude Opus 4.7',   provider: 'anthropic' },
   { id: 'anthropic/claude-sonnet-4-6', name: 'Claude Sonnet 4.6', provider: 'anthropic' },
   { id: 'anthropic/claude-haiku-4-5',  name: 'Claude Haiku 4.5',  provider: 'anthropic' },
