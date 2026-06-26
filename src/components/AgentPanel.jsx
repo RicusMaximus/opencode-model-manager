@@ -31,7 +31,7 @@ export default function AgentPanel({
             Configure the LLM orchestration for your current project pipeline.
           </p>
         </div>
-        <button className="deploy-btn" type="button" onClick={onCreateAgent}>
+        <button className="btn btn--primary" type="button" onClick={onCreateAgent}>
           <PlusIcon size={14} />
           New Agent
         </button>

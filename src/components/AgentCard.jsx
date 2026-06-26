@@ -62,7 +62,7 @@ export default function AgentCard({
           <div>{agent.modelKind}</div>
           <button
             type="button"
-            className="agent-card-settings-btn"
+            className="btn btn--icon btn--icon-sm"
             onClick={(e) => {
               e.stopPropagation();
               onOpenSettings?.(agent.id);

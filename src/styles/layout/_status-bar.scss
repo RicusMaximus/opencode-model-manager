@@ -38,7 +38,7 @@
   font-weight: 700;
 
   &.connected    { color: var(--accent-green); }
-  &.disconnected { color: #c0392b; }
+  &.disconnected { color: var(--red-danger); }
 }
 
 .status-sep-dot {

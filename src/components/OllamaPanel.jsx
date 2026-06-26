@@ -68,11 +68,11 @@ export default function OllamaPanel({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <button className="filter-btn" type="button">
+        <button className="btn btn--secondary" type="button">
           <FilterIcon size={16} />
           Filter
         </button>
-        <button className="deploy-btn" type="button">
+        <button className="btn btn--primary" type="button">
           <PlusIcon size={16} />
           Pull Model
         </button>

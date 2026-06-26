@@ -20,6 +20,15 @@ A desktop GUI (Electron 33 + React 18 + Vite 5) for configuring [OpenCode](https
 electron/
   main.js       — Electron main process: all IPC handlers, config I/O, Ollama HTTP client
   preload.js    — Context bridge; exposes window.electronAPI to the renderer
+  gate/                            — Enforced design→build gate (see Gated Review Queue)
+    utils.js                       — atomicWrite (temp → rename), extracted
+    security.js                    — HMAC sign/verify + confinePath path-confinement
+    schema.js                      — request/decision validators
+    bus.js                         — `.gate/` filesystem ops (requests/decisions/archive/audit)
+
+gate-tool/                         — Runtime-side gate (spawned by opencode, NOT Electron)
+  gate-mcp-server.js               — Blocking `submit_for_review` MCP server
+  gate-submit.js                   — Bash fallback CLI (same submit+poll+verify logic)
 
 src/
   App.jsx                          — Root: state, polling loops, save/browse handlers
@@ -36,9 +45,14 @@ src/
     Sidebar.jsx                    — Left navigation (Agents / Models / System)
     StatusBar.jsx                  — Ollama status indicator + Save button
     TitleBar.jsx                   — Frameless custom title bar with folder picker
+    ReviewQueuePanel.jsx           — Review queue: side-by-side artifacts, rule-based
+                                     checklist, approve/reject/annotate
+  gate/
+    checklist.js                   — Renderer-only runMtfChecklist() (no IPC)
   styles/                          — SCSS 7-1 architecture (abstracts, base, components,
                                      layout, pages, themes, utilities, vendors)
     main.scss                      — Single entry point that forwards all partials
+    pages/_review-queue.scss       — Review Queue panel styles
 
 index.html
 vite.config.js
@@ -62,6 +76,12 @@ All renderer→main communication goes through the preload context bridge. Never
 | `readAgentFile(agentId)` | `agent:read-file` | Reads raw `agents/<id>.agent.md`; returns `{ exists, content, path }` |
 | `writeAgentFile(agentId, content)` | `agent:write-file` | Atomic write of the raw `.agent.md` file |
 | `listSkills()` | `skills:list` | Scans `skill/` and `skills/` for `*.md` (or `<dir>/SKILL.md`); returns `{ skills: [{ id, name, description, path }] }` |
+| `listReviews()` | `gate:list` | Pending reviews (requests with no decision) as lightweight queue items |
+| `listArchivedReviews()` | `gate:list-archive` | Decided reviews from `archive/` (History tab) |
+| `readReview(id)` | `gate:read` | One review's validated request + confined, size-capped artifact contents |
+| `decideReview({ id, status, notes })` | `gate:decide` | App HMAC-signs the decision, writes it atomically, then archives + audits |
+| `setupGateMcpEntry()` | `gate:setup-mcp-entry` | Writes `mcp.gate` + orchestrator `mcp_gate_submit_for_review` tool grant into `opencode.jsonc` |
+| `onReviewUpdate(cb)` | push: `gate:updated` | Subscribe to live queue changes; returns an unsubscribe fn |
 | `listOllamaModels()` | `ollama:list-models` | `GET /api/tags`; returns `{ connected, models[] }` |
 | `getOllamaModelDetail(name)` | `ollama:get-model-detail` | `POST /api/show`; returns `{ contextLength, capabilities: string[] }` — `capabilities` lists Ollama capability tags (e.g. `["completion", "thinking"]`). Used by the Reasoning Effort control. |
 | `getSystemInfo()` | `system:get-info` | CPU, RAM, VRAM via `systeminformation` |
@@ -224,6 +244,10 @@ npm run build
 
 # Package → dist-electron/
 npm run electron:build
+
+# Run the Vitest suite (once / watch)
+npm run test
+npm run test:watch
 ```
 
 - Requires Node 18+, npm 9+.
@@ -239,6 +263,15 @@ npm run electron:build
 - CSS custom properties for theming are defined in `src/styles/themes/_default.scss` and consumed via `src/styles/base/_root.scss`.
 - Component-scoped styles live in `src/styles/components/_<name>.scss`; layout in `src/styles/layout/`.
 - Do not add inline styles or CSS-in-JS — use SCSS partials.
+
+### Button system
+
+All buttons use a shared `.btn` base + a semantic **role** modifier + an optional **size** modifier from `src/styles/components/_buttons.scss`. Do not create ad-hoc per-component button classes.
+
+- **Roles:** `.btn--primary` (main CTA, uppercase blue), `.btn--save` (confirm/approve, green), `.btn--destructive` (reject/delete, outlined red), `.btn--secondary` (supporting, elevated bg), `.btn--ghost` (text-only inline), `.btn--icon` (square icon-only; `.btn--icon-danger` for the red variant).
+- **Sizes:** default ~32px tall; `.btn--sm` (~24px); `.btn--icon` is 28×28 / `.btn--icon-sm` is 24×24. Radius is `4px` across the board.
+- **Semantic colors come from theme tokens:** `--blue-bright`/`--blue-btn-text` (primary), `--green-save`/`--green-save-text` (save), `--red-danger` (destructive — a CSS custom property in `src/styles/base/_root.scss`; do not use raw `#c0392b`, and `--red-validator` is for badges/status text only, never button text due to low contrast).
+- **Focus:** every button has a `:focus-visible` ring (`0 0 0 2px rgba(163, 201, 255, .35)`, or a role-colored ring for save/destructive). A few specialized controls keep their own classes (`.nav-item`, `.win-btn`, `.as-seg-btn`, `.as-perm-btn`, `.rq-toggle-btn`, `.rq-item`) but follow the same 4px-radius + focus-ring conventions.
 
 ---
 
@@ -284,6 +317,37 @@ When the model changes, `AgentSettingsPanel` automatically:
 2. Clears `draft.variant` if it's no longer a valid level for the new model.
 3. Clears `draft.options.reasoningEffort` if the mechanism changed away from `reasoningEffort`.
 4. Shows a warning badge if the loaded config had a legacy `options.reasoningEffort` for an Anthropic model (which is silently ignored by OpenCode — the correct field is `variant`).
+
+---
+
+## Gated Review Queue (enforced gate)
+
+The design→build gate from the team roster is now **enforced**, not just prose. See
+`docs/specs/gated-review-queue.md` and `gate-tool/README.md`.
+
+- The orchestrator calls the blocking `submit_for_review` MCP tool → writes a request to
+  `<configDir>/.gate/requests/<id>.json` and **blocks** (2s poll) until the app writes a
+  signed decision to `.gate/decisions/<id>.json`, then returns `{ status, notes }`.
+- The human decides in the Model Manager's **Review Queue** panel (Sidebar nav +
+  pending-count badge): side-by-side artifacts, a rule-based MTF checklist, and
+  Approve / Reject-with-notes.
+- **Trust:** decisions are HMAC-SHA256-signed by the app using a secret at
+  `<userData>/gate-secret.key` — deliberately OUTSIDE `configDir` so the agent can't read
+  it. The tool only **verifies**. Unsigned / forged / missing-secret / timeout / app-closed
+  all **fail closed** (`rejected`).
+- `.gate/` (`requests/`, `decisions/`, `archive/`, `audit.jsonl`) is a new **additive**
+  sibling dir under `configDir`; existing `config:read` / `config:write` / agent / skill
+  flows are untouched.
+- **Decision is never lost to the archiver race.** The blocking tool resolves a decision
+  from `decisions/<id>.json` OR, once the app has archived it, from `archive/<id>.json`'s
+  `.decision` (via `readDecisionOrArchive` in `electron/gate/bus.js`) — `archiveReview`
+  writes the archive atomically before unlinking the live decision, so a valid (still
+  signature-verified) approval is always readable.
+- **Secret found in both dev and packaged builds.** `gate:setup-mcp-entry` embeds the
+  real `app.getPath('userData')` path into the `mcp.gate` args as `--userDataDir`; absent
+  that, the tool probes both the package-name and productName userData dirs (first one
+  with `gate-secret.key` wins). Only the path — never the secret bytes — is written to
+  config, preserving the trust model.
 
 ---
 

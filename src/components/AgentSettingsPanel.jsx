@@ -248,7 +248,7 @@ function PatternRow({ pattern, value, onChange, onDelete }) {
         spellCheck={false}
       />
       <PermSelect value={value} onChange={(v) => onChange(pattern, v)} />
-      <button type="button" className="as-icon-btn as-icon-btn--danger" onClick={onDelete} title="Remove">
+      <button type="button" className="btn btn--icon btn--icon-danger" onClick={onDelete} title="Remove">
         <TrashIcon size={11} />
       </button>
     </div>
@@ -444,10 +444,10 @@ function AgentFileEditorModal({ agentId, onClose, onSaved }) {
             <FileTextIcon size={14} /> {agentId}.agent.md
           </span>
           <div className="as-modal-actions">
-            <button type="button" className="save-btn" onClick={doSave} disabled={loading || saving}>
+            <button type="button" className="btn btn--save btn--sm" onClick={doSave} disabled={loading || saving}>
               <SaveIcon size={12} /> {saving ? 'Saving…' : 'Save to disk'}
             </button>
-            <button type="button" className="as-icon-btn" onClick={onClose} title="Close">
+            <button type="button" className="btn btn--icon" onClick={onClose} title="Close">
               <XIcon size={14} />
             </button>
           </div>
@@ -823,7 +823,7 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
       {/* ── Header ── */}
       <div className="as-header">
         <div className="as-breadcrumbs">
-          <button type="button" className="as-breadcrumb-link" onClick={onBack}>Agents</button>
+          <button type="button" className="btn btn--ghost" onClick={onBack}>Agents</button>
           <span style={{ color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center' }}>
             <ChevronRightIcon size={12} />
           </span>
@@ -988,7 +988,7 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
               </p>
               <button
                 type="button"
-                className="as-discard-btn"
+                className="btn btn--secondary btn--sm"
                 style={{ alignSelf: 'flex-start' }}
                 onClick={() => setFileEditorOpen(true)}
               >
@@ -1348,7 +1348,7 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
             {!isNew && (
               <button
                 type="button"
-                className="as-discard-btn"
+                className="btn btn--secondary btn--sm"
                 onClick={() => {
                   setDraft(normalizeDraft(cloneAgent(agent)))
                   setIsDirty(false)
@@ -1357,7 +1357,7 @@ export default function AgentSettingsPanel({ agent, ollamaModels, skills = [], o
                 Discard
               </button>
             )}
-            <button type="button" className="save-btn" onClick={handleSave}>
+            <button type="button" className="btn btn--save" onClick={handleSave}>
               <SaveIcon size={12} /> {isNew ? 'Create Agent' : 'Save changes'}
             </button>
           </div>

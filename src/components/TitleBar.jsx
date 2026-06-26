@@ -46,7 +46,7 @@ export default function TitleBar({ configPath, onBrowse }) {
         <span className="titlebar-config-path">{displayPath}</span>
       </div>
       <div className="titlebar-right">
-        <button className="titlebar-browse-btn" onClick={onBrowse}>
+        <button className="btn btn--secondary btn--sm" onClick={onBrowse}>
           Browse
         </button>
         <div className="window-controls">

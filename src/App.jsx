@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import AgentPanel from "./components/AgentPanel.jsx";
 import AgentSettingsPanel from "./components/AgentSettingsPanel.jsx";
 import OllamaPanel from "./components/OllamaPanel.jsx";
+import ReviewQueuePanel from "./components/ReviewQueuePanel.jsx";
 import RightSidebar from "./components/RightSidebar.jsx";
 import StatusBar from "./components/StatusBar.jsx";
 import { applyAgentDefaults } from "./data/agentDefaults.js";
@@ -76,6 +77,7 @@ export default function App() {
     models: []
   });
   const [systemInfo, setSystemInfo] = useState(null);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [lastSaved, setLastSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -168,6 +170,25 @@ export default function App() {
     return () => {
       clearInterval(ollamaTimer);
       clearInterval(sysTimer);
+    };
+  }, []);
+
+  // ── Pending review count (sidebar badge) ──────────────────────────
+  useEffect(() => {
+    if (!api) return undefined;
+
+    const refreshCount = () => {
+      api
+        .listReviews()
+        .then((data) => setPendingReviewCount((data?.reviews || []).length))
+        .catch(() => setPendingReviewCount(0));
+    };
+
+    refreshCount();
+    const unsubscribe = api.onReviewUpdate(() => refreshCount());
+
+    return () => {
+      if (typeof unsubscribe === "function") unsubscribe();
     };
   }, []);
 
@@ -332,6 +353,7 @@ export default function App() {
           onNavigate={setActiveView}
           configPath={configPath}
           ollamaStatus={ollamaStatus}
+          pendingReviewCount={pendingReviewCount}
         />
         <main className="app-main">
           {activeView === "agents" && (
@@ -371,6 +393,7 @@ export default function App() {
               systemInfo={systemInfo}
             />
           )}
+          {activeView === "review-queue" && <ReviewQueuePanel />}
           {activeView === "system" && (
             <div className="system-full-view">
               <RightSidebar

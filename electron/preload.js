@@ -32,4 +32,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // System info
   getSystemInfo: () => ipcRenderer.invoke('system:get-info'),
+
+  // Gate (Review Queue)
+  listReviews: () => ipcRenderer.invoke('gate:list'),
+  listArchivedReviews: () => ipcRenderer.invoke('gate:list-archive'),
+  readReview: (id) => ipcRenderer.invoke('gate:read', id),
+  decideReview: (payload) => ipcRenderer.invoke('gate:decide', payload),
+  setupGateMcpEntry: () => ipcRenderer.invoke('gate:setup-mcp-entry'),
+  // Subscribe to live queue/decision pushes; returns an unsubscribe function.
+  onReviewUpdate: (cb) => {
+    const l = (_e, d) => cb(d)
+    ipcRenderer.on('gate:updated', l)
+    return () => ipcRenderer.removeListener('gate:updated', l)
+  },
 })

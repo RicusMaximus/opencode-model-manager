@@ -186,42 +186,6 @@
   margin-top: auto; // pushes to bottom of card
 }
 
-// Per-card settings cog button (top-right corner)
-.agent-card-settings-btn {
-  // position: absolute;
-  // top: 10px;
-  // right: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease;
-  z-index: 1;
-
-  &:hover {
-    background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
-    border-color: color-mix(in srgb, var(--accent-blue) 35%, transparent);
-    color: var(--accent-blue);
-  }
-
-  &:active {
-    transform: translateY(1px);
-  }
-
-  &:focus-visible {
-    outline: none;
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 0 2px
-      color-mix(in srgb, var(--accent-blue) 30%, transparent);
-  }
-}
+// The per-card settings cog now uses the shared `.btn btn--icon btn--icon-sm`
+// system (see components/_buttons.scss). Layout for the cog's row lives in
+// `.agent-card-top` above.

@@ -1,8 +1,25 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, session } = require('electron')
 const path = require('path')
 const os = require('os')
 const fs = require('fs/promises')
+const fsSync = require('fs') // callback API — needed for fs.watch (gate queue watcher)
 const http = require('http')
+const { atomicWrite } = require('./gate/utils')
+const { loadOrCreateSecret, sign, confinePath } = require('./gate/security')
+const {
+  validateDecisionInput,
+  MAX_ARTIFACT_COUNT,
+  MAX_ARTIFACT_SIZE_BYTES,
+} = require('./gate/schema')
+const {
+  ensureGateDirs,
+  listPendingRequests,
+  listArchivedReviews,
+  readRequest,
+  writeDecision,
+  archiveReview,
+  appendAuditEntry,
+} = require('./gate/bus')
 
 const isDev = process.env.NODE_ENV === 'development'
 const DEFAULT_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode')
@@ -14,6 +31,16 @@ const DEFAULT_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode')
 app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
 
 let mainWindow
+
+// ── Gate (review queue) module-level state ──────────────────────────────────────
+// The HMAC secret is loaded once from app.getPath('userData') (NOT configDir) so
+// the gate tool's verify() matches sign() byte-for-byte. Watcher/fallback timers
+// are tracked here so they can be torn down on window close / config-path change.
+let gateSecret = null
+let gateWatcher = null
+let gateWatchDebounce = null
+let gatePollInterval = null
+let gateRetryTimeout = null
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -36,14 +63,129 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
+
+  // Tear down the gate watcher + any fallback timers when the window goes away.
+  mainWindow.on('closed', () => {
+    stopGateWatcher()
+    mainWindow = null
+  })
 }
 
 app.whenReady().then(() => {
+  setupContentSecurityPolicy()
   createWindow()
+  initGate()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+// Strict Content-Security-Policy so untrusted artifact content rendered in the
+// Review Queue can neither run inline script nor reach the network. Inline STYLE
+// is allowed (React/Vite inject style attributes); inline SCRIPT and eval are
+// not. In dev we relax script/connect for Vite's HMR (inline bootstrap + ws).
+// This does NOT weaken contextIsolation/nodeIntegration — those stay hardened.
+function setupContentSecurityPolicy() {
+  const policy = isDev
+    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+      + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "
+      + "connect-src 'self' ws://localhost:5173 http://localhost:5173; "
+      + "object-src 'none'; base-uri 'self'; frame-src 'none'"
+    : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+      + "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; "
+      + "object-src 'none'; base-uri 'self'; frame-src 'none'"
+
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [policy],
+      },
+    })
+  })
+}
+
+// ── Gate init + watcher ─────────────────────────────────────────────────────────
+
+// Load the signing secret (from userData) and bootstrap the .gate/ dirs, THEN
+// start the watcher (sequenced after ensureGateDirs so requests/ exists).
+async function initGate() {
+  try {
+    gateSecret = await loadOrCreateSecret(app.getPath('userData'))
+  } catch (err) {
+    console.error('gate: failed to load signing secret:', err.message)
+  }
+  try {
+    const configDir = await getConfigDir()
+    await ensureGateDirs(configDir)
+    startGateWatcher(configDir)
+  } catch (err) {
+    console.error('gate: failed to init dirs/watcher:', err.message)
+  }
+}
+
+function pushGateUpdate(payload) {
+  mainWindow?.webContents?.send('gate:updated', payload)
+}
+
+function stopGateWatcher() {
+  if (gateWatcher) {
+    try { gateWatcher.close() } catch { /* already closed */ }
+    gateWatcher = null
+  }
+  if (gateWatchDebounce) { clearTimeout(gateWatchDebounce); gateWatchDebounce = null }
+  if (gatePollInterval) { clearInterval(gatePollInterval); gatePollInterval = null }
+  if (gateRetryTimeout) { clearTimeout(gateRetryTimeout); gateRetryTimeout = null }
+}
+
+// Fallback when fs.watch is unsupported/fails (spec edge case 10): poll-push every
+// 3s so the renderer still live-updates, and retry establishing a real watch after
+// 30s (cheaper than polling forever if the platform recovers).
+// fs.watch can fail under AV/corporate policy on Windows, so polling keeps the queue live.
+function startGatePollingFallback(configDir) {
+  if (!gatePollInterval) {
+    gatePollInterval = setInterval(() => {
+      pushGateUpdate({ type: 'queue-changed' })
+    }, 3000)
+  }
+  if (!gateRetryTimeout) {
+    gateRetryTimeout = setTimeout(() => {
+      gateRetryTimeout = null
+      if (gatePollInterval) { clearInterval(gatePollInterval); gatePollInterval = null }
+      startGateWatcher(configDir)
+    }, 30000)
+  }
+}
+
+// Watch <configDir>/.gate/requests/ (non-recursive). On change/rename, debounce
+// 500ms then push a 'queue-changed' event. On watch error/throw, fall back to
+// interval polling. NOTE: configDir can change via config:set-path — that handler
+// re-invokes startGateWatcher with the new dir, so the watcher always tracks the
+// active configDir.
+function startGateWatcher(configDir) {
+  stopGateWatcher()
+  const requestsDir = path.join(configDir, '.gate', 'requests')
+  try {
+    gateWatcher = fsSync.watch(requestsDir, { recursive: false }, () => {
+      if (gateWatchDebounce) clearTimeout(gateWatchDebounce)
+      gateWatchDebounce = setTimeout(() => {
+        gateWatchDebounce = null
+        pushGateUpdate({ type: 'queue-changed' })
+      }, 500)
+    })
+    gateWatcher.on('error', (err) => {
+      console.warn('gate: watcher error, falling back to polling:', err.message)
+      if (gateWatcher) {
+        try { gateWatcher.close() } catch { /* already closed */ }
+        gateWatcher = null
+      }
+      startGatePollingFallback(configDir)
+    })
+  } catch (err) {
+    console.warn('gate: failed to start watcher, falling back to polling:', err.message)
+    startGatePollingFallback(configDir)
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
@@ -139,13 +281,6 @@ function parseAgentFile(content) {
   }
 }
 
-// Atomic write: temp file → rename, so a crash never leaves a half-written file.
-async function atomicWrite(filePath, content) {
-  const tmpPath = filePath + '.tmp'
-  await fs.writeFile(tmpPath, content, 'utf8')
-  await fs.rename(tmpPath, filePath)
-}
-
 // Parse a skill markdown file into { name, description }.
 // Supports YAML frontmatter (name/description) and falls back to the first
 // "# Heading" and the first non-empty paragraph below it.
@@ -217,6 +352,13 @@ ipcMain.handle('config:get-path', async () => {
 ipcMain.handle('config:set-path', async (_event, dirPath) => {
   const prefsPath = await getPrefsPath()
   await fs.writeFile(prefsPath, JSON.stringify({ configDir: dirPath }, null, 2), 'utf8')
+  // Re-point the gate bus + watcher at the new configDir.
+  try {
+    await ensureGateDirs(dirPath)
+    startGateWatcher(dirPath)
+  } catch (err) {
+    console.warn('gate: failed to re-init for new config path:', err.message)
+  }
   return dirPath
 })
 
@@ -565,5 +707,151 @@ ipcMain.handle('system:get-info', async () => {
       gpu: null,
       error: err.message,
     }
+  }
+})
+
+// ── Gate (Review Queue) ─────────────────────────────────────────────────────────
+// Trust rule: BOTH the renderer args AND the on-disk request files are untrusted.
+// Every handler validates inputs, confines artifact paths, and caps sizes. The
+// app is viewer + decider only — it never executes artifact content.
+
+// List pending reviews (requests without a matching decision).
+ipcMain.handle('gate:list', async () => {
+  const configDir = await getConfigDir()
+  await ensureGateDirs(configDir)
+  return { reviews: await listPendingRequests(configDir) }
+})
+
+// List archived (already-decided) reviews for the History view.
+ipcMain.handle('gate:list-archive', async () => {
+  const configDir = await getConfigDir()
+  await ensureGateDirs(configDir)
+  return { reviews: await listArchivedReviews(configDir) }
+})
+
+// Read one review: the validated request + the confined, size-capped contents of
+// each artifact (as text for inert rendering).
+ipcMain.handle('gate:read', async (_event, id) => {
+  if (typeof id !== 'string' || id.length === 0 || id.length > 128) {
+    return { error: 'bad-id' }
+  }
+
+  const configDir = await getConfigDir()
+
+  let request
+  try {
+    request = await readRequest(configDir, id)
+  } catch (err) {
+    // Existing-but-malformed request (parse/validation failure).
+    console.warn(`gate: read failed for '${id}': ${err.message}`)
+    return { error: 'unavailable' }
+  }
+  if (!request) return { error: 'not-found' }
+
+  const artifacts = []
+  // Cap the number of artifacts loaded regardless of what the request claims.
+  for (const art of request.artifacts.slice(0, MAX_ARTIFACT_COUNT)) {
+    try {
+      const safePath = await confinePath(configDir, art.path)
+      const stat = await fs.stat(safePath)
+      if (stat.size > MAX_ARTIFACT_SIZE_BYTES) {
+        artifacts.push({ kind: art.kind, path: art.path, content: null, error: 'artifact-too-large' })
+        continue
+      }
+      const content = await fs.readFile(safePath, 'utf8')
+      artifacts.push({ kind: art.kind, path: art.path, content })
+    } catch (err) {
+      if (err && err.message === 'path-escape') {
+        artifacts.push({ kind: art.kind, path: art.path, content: null, error: 'path-confined' })
+      } else {
+        artifacts.push({ kind: art.kind, path: art.path, content: null, error: 'unavailable' })
+      }
+    }
+  }
+
+  return { request, artifacts }
+})
+
+// Record a human decision: validate input, sign it with the userData secret,
+// atomically write the decision, archive the review, and append to the audit log.
+ipcMain.handle('gate:decide', async (_event, rawInput) => {
+  let input
+  try {
+    input = validateDecisionInput(rawInput)
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+
+  if (!gateSecret) {
+    return { success: false, error: 'gate-secret-not-loaded' }
+  }
+
+  try {
+    const configDir = await getConfigDir()
+    const decision = {
+      id: input.id,
+      schemaVersion: 1,
+      status: input.status,
+      notes: input.notes ?? '',
+      decidedAt: new Date().toISOString(),
+    }
+    // Sign with the SAME secret + sign() the gate tool uses to verify.
+    decision.sig = sign(decision, gateSecret)
+
+    await writeDecision(configDir, decision)
+    await archiveReview(configDir, decision.id)
+    await appendAuditEntry(configDir, {
+      id: decision.id,
+      status: decision.status,
+      decidedAt: decision.decidedAt,
+    })
+
+    pushGateUpdate({ type: 'decision-made', id: decision.id })
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// One-click wiring: register the gate MCP server + grant the orchestrator the
+// submit-for-review tool in opencode.jsonc. Preserves all existing config fields
+// (round-tripped through strip-json-comments + parse, mirroring config:write).
+ipcMain.handle('gate:setup-mcp-entry', async () => {
+  try {
+    const configDir = await getConfigDir()
+    const userDataPath = app.getPath('userData')
+    const serverPath = isDev
+      ? path.join(__dirname, '../gate-tool/gate-mcp-server.js')
+      : path.join(process.resourcesPath, 'gate-tool/gate-mcp-server.js')
+
+    const configPath = path.join(configDir, 'opencode.jsonc')
+
+    // Read existing config (start from {} if it doesn't exist yet).
+    let parsed = {}
+    try {
+      const raw = await fs.readFile(configPath, 'utf8')
+      const { default: strip } = await import('strip-json-comments')
+      parsed = JSON.parse(strip(raw))
+    } catch { /* no config yet → start fresh */ }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) parsed = {}
+
+    // Inject/merge the MCP server entry (preserve sibling mcp entries).
+    if (!parsed.mcp || typeof parsed.mcp !== 'object' || Array.isArray(parsed.mcp)) parsed.mcp = {}
+    parsed.mcp.gate = { type: 'local', command: 'node', args: [serverPath, '--userDataDir', userDataPath] }
+
+    // Ensure the orchestrator can call the tool (preserve existing agent config).
+    if (!parsed.agent || typeof parsed.agent !== 'object' || Array.isArray(parsed.agent)) parsed.agent = {}
+    const orchId = 'agent-orchestrator'
+    if (!parsed.agent[orchId] || typeof parsed.agent[orchId] !== 'object' || Array.isArray(parsed.agent[orchId])) {
+      parsed.agent[orchId] = {}
+    }
+    const orch = parsed.agent[orchId]
+    if (!orch.tools || typeof orch.tools !== 'object' || Array.isArray(orch.tools)) orch.tools = {}
+    orch.tools['mcp_gate_submit_for_review'] = 'allow'
+
+    await atomicWrite(configPath, JSON.stringify(parsed, null, 2))
+    return { success: true, serverPath }
+  } catch (err) {
+    return { success: false, error: err.message }
   }
 })

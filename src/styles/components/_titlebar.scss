@@ -52,22 +52,6 @@
   -webkit-app-region: no-drag;
 }
 
-.titlebar-browse-btn {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-  background: transparent;
-  transition: background 0.15s;
-
-  &:hover {
-    background: var(--bg-elevated);
-  }
-}
-
 .window-controls {
   display: flex;
   gap: 4px;
@@ -91,7 +75,12 @@
   }
 
   &.close:hover {
-    background: #c0392b;
+    background: var(--red-danger);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
   }
 
   svg {

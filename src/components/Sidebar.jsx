@@ -31,13 +31,24 @@ function SystemIcon({ size = 16 }) {
   )
 }
 
+function ReviewQueueIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M2 3.5h12v9H2v-9Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M2 9.5h3l1 1.5h4l1-1.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M6 6l1.5 1.5L11 4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 const NAV_ITEMS = [
   { id: 'agents', label: 'Agents', Icon: AgentsIcon },
   { id: 'models', label: 'Models', Icon: ModelsIcon },
+  { id: 'review-queue', label: 'Review Queue', Icon: ReviewQueueIcon },
   { id: 'system', label: 'System', Icon: SystemIcon },
 ]
 
-export default function Sidebar({ activeView, onNavigate, configPath, ollamaStatus }) {
+export default function Sidebar({ activeView, onNavigate, configPath, ollamaStatus, pendingReviewCount = 0 }) {
   // Extract the last folder name from the config path
   const dirName = configPath
     ? configPath.replace(/\\/g, '/').split('/').filter(Boolean).pop() || 'opencode'
@@ -63,6 +74,9 @@ export default function Sidebar({ activeView, onNavigate, configPath, ollamaStat
               <Icon size={16} />
             </span>
             {label}
+            {id === 'review-queue' && pendingReviewCount > 0 && (
+              <span className="nav-badge">{pendingReviewCount}</span>
+            )}
           </button>
         ))}
       </nav>

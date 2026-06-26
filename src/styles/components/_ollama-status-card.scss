@@ -31,7 +31,7 @@
   flex-shrink: 0;
 
   &.green { background: var(--accent-green); }
-  &.red   { background: #c0392b; }
+  &.red   { background: var(--red-danger); }
 }
 
 .ollama-addr {

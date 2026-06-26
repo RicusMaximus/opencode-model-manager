@@ -49,7 +49,7 @@ export default function StatusBar({ ollamaStatus, lastSaved, onSave, isSaving, i
           Last saved: {formatLastSaved(lastSaved)}
         </span>
         <button
-          className="save-btn"
+          className="btn btn--save btn--sm"
           onClick={onSave}
           disabled={isSaving || !isDirty}
           type="button"

@@ -25,19 +25,6 @@
   color: var(--text-secondary);
 }
 
-.as-breadcrumb-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: var(--text-secondary);
-  cursor: pointer;
-
-  &:hover {
-    color: var(--accent-blue);
-  }
-}
-
 .as-breadcrumb-current {
   color: var(--text-primary);
   font-weight: 500;
@@ -197,20 +184,6 @@
   gap: 8px;
 }
 
-.as-icon-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 2px;
-
-  &:hover {
-    color: var(--accent-blue);
-    background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
-  }
-}
-
 .as-label {
   font-family: var(--font-mono);
   font-size: 10.5px;
@@ -320,7 +293,7 @@
   padding: 5px 10px;
   background: transparent;
   border: none;
-  border-radius: 3px;
+  border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-secondary);
@@ -337,6 +310,11 @@
     background: var(--accent-blue);
     color: var(--blue-btn-text);
     font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
   }
 }
 
@@ -398,7 +376,7 @@
 
 .as-perm-btn {
   padding: 3px 9px;
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--bg-deep);
   font-family: var(--font-mono);
@@ -411,6 +389,11 @@
   &:hover {
     color: var(--text-secondary);
     border-color: var(--text-muted);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
   }
 
   &--allow.is-active {
@@ -428,8 +411,8 @@
   }
 
   &--deny.is-active {
-    background: color-mix(in srgb, #c0392b 18%, transparent);
-    border-color: color-mix(in srgb, #c0392b 50%, transparent);
+    background: color-mix(in srgb, var(--red-danger) 18%, transparent);
+    border-color: color-mix(in srgb, var(--red-danger) 50%, transparent);
     color: #e57373;
     font-weight: 600;
   }
@@ -480,6 +463,11 @@
     background: var(--bg-workspace);
     color: var(--text-primary);
   }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
+  }
 }
 
 .as-pattern-chevron {
@@ -529,7 +517,7 @@
   padding: 4px 8px;
   background: transparent;
   border: 1px dashed var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--text-muted);
@@ -540,6 +528,11 @@
   &:hover {
     color: var(--accent-blue);
     border-color: var(--accent-blue);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
   }
 }
 
@@ -557,7 +550,7 @@
   padding: 6px 9px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 11.5px;
   color: var(--text-secondary);
   cursor: pointer;
@@ -566,6 +559,11 @@
   svg { color: var(--accent-blue); flex-shrink: 0; }
 
   &:hover { border-color: var(--accent-blue); }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
+  }
 }
 
 .as-skill-ms-label {
@@ -663,13 +661,6 @@
   color: var(--text-muted);
 }
 
-.as-icon-btn--danger {
-  &:hover {
-    color: #e57373 !important;
-    background: color-mix(in srgb, #c0392b 12%, transparent) !important;
-  }
-}
-
 // ── Skills card ───────────────────────────────────────────────────────────
 .as-skills-empty {
   margin: -8px 0 0 0;
@@ -723,23 +714,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.as-discard-btn {
-  padding: 5px 12px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s;
-
-  &:hover {
-    background: var(--bg-workspace);
-    color: var(--text-primary);
-  }
 }
 
 // ── Markdown editor modal ─────────────────────────────────────────────────
