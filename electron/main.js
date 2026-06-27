@@ -58,7 +58,7 @@ function createWindow() {
   })
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.loadURL('http://localhost:2149')
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
@@ -89,7 +89,7 @@ function setupContentSecurityPolicy() {
   const policy = isDev
     ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
       + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "
-      + "connect-src 'self' ws://localhost:5173 http://localhost:5173; "
+      + "connect-src 'self' ws://localhost:2149 http://localhost:2149; "
       + "object-src 'none'; base-uri 'self'; frame-src 'none'"
     : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
       + "img-src 'self' data:; font-src 'self' data:; connect-src 'self'; "
