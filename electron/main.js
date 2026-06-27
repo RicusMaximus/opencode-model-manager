@@ -837,7 +837,7 @@ ipcMain.handle('gate:setup-mcp-entry', async () => {
 
     // Inject/merge the MCP server entry (preserve sibling mcp entries).
     if (!parsed.mcp || typeof parsed.mcp !== 'object' || Array.isArray(parsed.mcp)) parsed.mcp = {}
-    parsed.mcp.gate = { type: 'local', command: 'node', args: [serverPath, '--userDataDir', userDataPath] }
+    parsed.mcp.gate = { type: 'local', command: ['node', serverPath, '--userDataDir', userDataPath], enabled: true }
 
     // Ensure the orchestrator can call the tool (preserve existing agent config).
     if (!parsed.agent || typeof parsed.agent !== 'object' || Array.isArray(parsed.agent)) parsed.agent = {}
@@ -847,7 +847,7 @@ ipcMain.handle('gate:setup-mcp-entry', async () => {
     }
     const orch = parsed.agent[orchId]
     if (!orch.tools || typeof orch.tools !== 'object' || Array.isArray(orch.tools)) orch.tools = {}
-    orch.tools['mcp_gate_submit_for_review'] = 'allow'
+    orch.tools['mcp_gate_submit_for_review'] = true
 
     await atomicWrite(configPath, JSON.stringify(parsed, null, 2))
     return { success: true, serverPath }

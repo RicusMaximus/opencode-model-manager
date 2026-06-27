@@ -102,8 +102,8 @@ packaged builds — see the coupling note above). Conceptually:
   "mcp": {
     "gate": {
       "type": "local",
-      "command": "node",
-      "args": ["<abs-path>/gate-tool/gate-mcp-server.js", "--userDataDir", "<abs-path>/userData"]
+      "command": ["node", "<abs-path>/gate-tool/gate-mcp-server.js", "--userDataDir", "<abs-path>/userData"],
+      "enabled": true
     }
   }
 }
