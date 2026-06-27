@@ -104,14 +104,16 @@ Agent display names and descriptions are read from each agent's `.agent.md` fron
 
 **Built-in agents:**
 
-| ID | Fallback name | Default color |
-|---|---|---|
-| `agent-orchestrator` | Orchestrator | Blue `#59a6ff` |
-| `builder` | Builder | Green `#26a540` |
-| `architect` | Architect | Amber `#d19921` |
-| `validator` | Validator | Red `#940009` |
-| `scribe` | Scribe | Dark grey `#404752` |
-| `ux_ui_designer` | UX/UI Designer | Blue `#59a6ff` |
+| ID | Name | Color | Role |
+|---|---|---|---|
+| `agent-orchestrator` | agent-orchestrator | 🔵 `#59a6ff` | Primary entry point that decomposes complex, multi-discipline work and delegates each piece to the right specialist. Coordinates the pipeline and synthesizes a final summary — it never researches, codes, edits, or runs commands itself. |
+| `architect` | architect | 🟠 `#d19921` | Research, requirements analysis, and architecture planning. Explores the codebase, weighs trade-offs, and produces a concrete, file-level implementation plan before any code is written. Returns a design document, not code. |
+| `builder` | builder | 🟢 `#26a540` | Core implementation. Writes, modifies, and refactors real code from an existing plan with targeted, idiomatic edits that match the codebase. Changes one logical thing at a time and stays in scope. |
+| `validator` | validator | 🔴 `#940009` | Testing, debugging, and QA. Runs real tests across happy path, edge cases, and failure modes; catches regressions and reports each bug precisely. Returns a ready-to-ship / needs-fixes recommendation. |
+| `scribe` | scribe | 🔵 `#0a439e` | Documentation and behavior-preserving code refinement. Writes READMEs, guides, and inline comments that explain the *why*, plus small clarity improvements. Must not alter behavior. |
+| `ui-generator` | UI Generator (Stitch) | 🟦 `#1abc9c` | Idea-to-screen specialist. Turns specs and notes into UI screens via the Google Stitch MCP server, then produces a clean HANDOFF block for the integrator. Requires the `stitch` MCP server. |
+| `design-system-integrator` | Design System Integrator (Figma) | 🟦 `#1abc9c` | Figma systematization specialist. Moves Stitch-generated designs into Figma and rebuilds them with the project's design system — real components, variables, and tokens. Requires the `figma` MCP server and `FIGMA_ACCESS_TOKEN`. |
+| `repository` | Git | ⬛ `#404752` | Lightweight commit assistant. Inspects `git status`/`git diff`, works out what functionally changed, and writes a Conventional Commits message. Never pushes unless explicitly asked. |
 
 ### Models
 
