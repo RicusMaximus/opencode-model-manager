@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft — ready for orchestrator |
 | **Date** | 2026-06-24 |
-| **Target component** | OpenCode Model Manager (Electron + React) |
+| **Target component** | OpenCode Agent Manager (Electron + React) |
 | **Primary surfaces** | `src/components/AgentSettingsPanel.jsx`, `src/components/ModelDropdown.jsx`, `electron/main.js` |
 | **Owner** | Rico Robinson |
 | **Implementation** | NOT in scope for this document — this is a design hand-off for an agent orchestrator |

@@ -1,4 +1,4 @@
-# OpenCode Model Manager
+# OpenCode Agent Manager
 
 A desktop GUI for configuring [OpenCode](https://opencode.ai) — assign LLM models to agents, tune per-agent reasoning effort, manage tools/skills/permissions, browse locally installed Ollama models, monitor system resources, and run a cryptographically-enforced **design→build approval gate** — all without hand-editing JSON.
 
@@ -11,9 +11,9 @@ A desktop GUI for configuring [OpenCode](https://opencode.ai) — assign LLM mod
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-![Last commit](https://img.shields.io/github/last-commit/RicusMaximus/opencode-model-manager)
-![Open issues](https://img.shields.io/github/issues/RicusMaximus/opencode-model-manager)
-![Stars](https://img.shields.io/github/stars/RicusMaximus/opencode-model-manager?style=social)
+![Last commit](https://img.shields.io/github/last-commit/RicusMaximus/opencode-agent-manager)
+![Open issues](https://img.shields.io/github/issues/RicusMaximus/opencode-agent-manager)
+![Stars](https://img.shields.io/github/stars/RicusMaximus/opencode-agent-manager?style=social)
 
 > Built with **Electron 33 + React 18 + Vite 5**, styled with a SCSS 7-1 architecture, and tested with **Vitest**.
 
@@ -49,7 +49,7 @@ A desktop GUI for configuring [OpenCode](https://opencode.ai) — assign LLM mod
 
 ## What it does
 
-OpenCode Model Manager reads and writes your OpenCode configuration directly:
+OpenCode Agent Manager reads and writes your OpenCode configuration directly:
 
 - `<configDir>/opencode.jsonc` — the global config and per-agent settings
 - `<configDir>/agents/*.agent.md` — agent definition files (YAML frontmatter + Markdown)
@@ -185,7 +185,7 @@ The design→build gate is **enforced**, not just prose. A design agent cannot p
 
 ```
 ┌──────────────┐   submit_for_review    ┌──────────────────┐    decision (HMAC-signed)   ┌──────────────┐
-│  OpenCode    │ ─────────────────────▶ │   .gate/ bus      │ ◀────────────────────────── │ Model Manager│
+│  OpenCode    │ ─────────────────────▶ │   .gate/ bus      │ ◀────────────────────────── │ Agent Manager│
 │  (architect) │   writes request,      │ requests/         │    app signs + writes,      │ Review Queue │
 │              │   BLOCKS on 2s poll     │ decisions/        │    archives + audits        │ (human)      │
 └──────────────┘ ◀───────────────────── │ archive/ audit    │ ──────────────────────────▶ └──────────────┘
@@ -195,7 +195,7 @@ The design→build gate is **enforced**, not just prose. A design agent cannot p
 **How it works**
 
 1. The orchestrator/design agent calls the blocking `submit_for_review` MCP tool (hosted by `gate-tool/gate-mcp-server.js`, spawned by the **OpenCode runtime**, not Electron). It writes a request to `<configDir>/.gate/requests/<id>.json` and **blocks** (polling every 2 s) until a signed decision appears.
-2. The human reviews in the Model Manager's **Review Queue** panel and clicks Approve or Reject-with-notes.
+2. The human reviews in the Agent Manager's **Review Queue** panel and clicks Approve or Reject-with-notes.
 3. The app **HMAC-SHA256-signs** the decision using a secret at `<userData>/gate-secret.key` — deliberately stored **outside** `configDir` so the agent can't read it — then writes it atomically and archives + audits it.
 4. The tool **verifies** the signature and returns `{ status, notes }`. The agent proceeds only on a valid `approved`.
 
@@ -294,7 +294,7 @@ The default `configDir`:
 %USERPROFILE%\.config\opencode    # Windows
 ```
 
-`<userData>` is Electron's per-user app data dir — `%APPDATA%\opencode-model-gui` (dev) / `%APPDATA%\OpenCode Model Manager` (packaged) on Windows, with platform equivalents on macOS/Linux. You can change the config directory any time via the **Browse** button in the title bar; the choice persists across restarts.
+`<userData>` is Electron's per-user app data dir — `%APPDATA%\opencode-agent-gui` (dev) / `%APPDATA%\OpenCode Agent Manager` (packaged) on Windows, with platform equivalents on macOS/Linux. You can change the config directory any time via the **Browse** button in the title bar; the choice persists across restarts.
 
 ### `opencode.jsonc` shape
 
@@ -359,7 +359,7 @@ Packaged installers are written to `dist-electron/`. The build config lives in t
 ## Project structure
 
 ```
-opencode-model-manager/
+opencode-agent-manager/
 ├── electron/
 │   ├── main.js                 # Main process — IPC handlers, config I/O, Ollama client, gate
 │   ├── preload.js              # Context bridge (exposes electronAPI to the renderer)

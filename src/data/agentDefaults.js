@@ -2,7 +2,7 @@
  * agentDefaults.js
  *
  * SINGLE SOURCE OF TRUTH for the default value of every per-agent configuration
- * item the OpenCode Model Manager can edit.
+ * item the OpenCode Agent Manager can edit.
  *
  * Two consumers:
  *   1. App.jsx load path — runs `applyAgentDefaults` over every agent read from

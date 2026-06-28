@@ -32,8 +32,8 @@ const { validateReviewRequest } = require('../electron/gate/schema')
 const { readDecisionOrArchive } = require('../electron/gate/bus')
 
 const SECRET_FILE_NAME = 'gate-secret.key'
-const PACKAGE_NAME = 'opencode-model-gui'
-const PRODUCT_NAME = 'OpenCode Model Manager'
+const PACKAGE_NAME = 'opencode-agent-gui'
+const PRODUCT_NAME = 'OpenCode Agent Manager'
 const POLL_INTERVAL_MS = 2000
 const DEFAULT_EXPIRES_IN_SECONDS = 86400
 
@@ -62,7 +62,7 @@ function userDataCandidates() {
   }
   // Linux / other: Electron uses XDG_CONFIG_HOME or ~/.config; single candidate.
   const xdg = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config')
-  return [path.join(xdg, 'opencode-model-manager')]
+  return [path.join(xdg, 'opencode-agent-manager')]
 }
 
 // Resolve the userData dir. An explicit override (the `--userDataDir` arg passed

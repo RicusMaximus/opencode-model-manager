@@ -1,6 +1,6 @@
 # Styles Reference
 
-A practical reference for the SCSS architecture used in `opencode-model-gui`. For the original migration design and full token rationale, see [`scss-refactor-plan.md`](./scss-refactor-plan.md).
+A practical reference for the SCSS architecture used in `opencode-agent-gui`. For the original migration design and full token rationale, see [`scss-refactor-plan.md`](./scss-refactor-plan.md).
 
 ---
 

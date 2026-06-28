@@ -1,4 +1,4 @@
-# SCSS Refactor Plan — opencode-model-gui
+# SCSS Refactor Plan — opencode-agent-gui
 
 > Architecture document for the Builder. Every decision here is final; the
 > Builder should not need to invent structure, naming, or token values.
@@ -797,4 +797,4 @@ These are hard rules. The Builder must enforce them in every partial.
 
 ## File path of this plan
 
-`C:\Projects\opencode-model-gui\docs\scss-refactor-plan.md`
+`C:\Projects\opencode-agent-gui\docs\scss-refactor-plan.md`

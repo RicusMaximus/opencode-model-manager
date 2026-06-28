@@ -1,7 +1,7 @@
 {
-  "name": "opencode-model-gui",
+  "name": "opencode-agent-gui",
   "version": "1.0.0",
-  "description": "OpenCode Model Manager — Electron + React desktop app",
+  "description": "OpenCode Agent Manager — Electron + React desktop app",
   "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -32,8 +32,8 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.opencode.model-manager",
-    "productName": "OpenCode Model Manager",
+    "appId": "com.opencode.agent-manager",
+    "productName": "OpenCode Agent Manager",
     "directories": {
       "output": "dist-electron"
     },

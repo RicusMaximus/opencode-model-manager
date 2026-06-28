@@ -1,4 +1,4 @@
-# AGENTS.md — OpenCode Model Manager
+# AGENTS.md — OpenCode Agent Manager
 
 A desktop GUI (Electron 33 + React 18 + Vite 5) for configuring [OpenCode](https://opencode.ai) agents without hand-editing JSON. Agents working on this codebase should read this file before making changes.
 
@@ -328,7 +328,7 @@ The design→build gate from the team roster is now **enforced**, not just prose
 - The orchestrator calls the blocking `submit_for_review` MCP tool → writes a request to
   `<configDir>/.gate/requests/<id>.json` and **blocks** (2s poll) until the app writes a
   signed decision to `.gate/decisions/<id>.json`, then returns `{ status, notes }`.
-- The human decides in the Model Manager's **Review Queue** panel (Sidebar nav +
+- The human decides in the Agent Manager's **Review Queue** panel (Sidebar nav +
   pending-count badge): side-by-side artifacts, a rule-based MTF checklist, and
   Approve / Reject-with-notes.
 - **Trust:** decisions are HMAC-SHA256-signed by the app using a secret at

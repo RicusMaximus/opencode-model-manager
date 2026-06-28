@@ -113,8 +113,8 @@ async function spawnServer() {
   // Create the temp base (this becomes APPDATA on Windows).
   const tmpBase = await fs.mkdtemp(path.join(os.tmpdir(), 'gate-mcp-test-'))
 
-  // userDataDir = <APPDATA>/OpenCode Model Manager  (mirrors deriveUserDataDir on win32)
-  const userDataDir = path.join(tmpBase, 'OpenCode Model Manager')
+  // userDataDir = <APPDATA>/OpenCode Agent Manager  (mirrors deriveUserDataDir on win32)
+  const userDataDir = path.join(tmpBase, 'OpenCode Agent Manager')
   await fs.mkdir(userDataDir, { recursive: true })
 
   // Generate + write the HMAC secret (app-owned; server reads it).
@@ -172,7 +172,7 @@ async function spawnServer() {
  *
  * opts:
  *   userDataDirName        — subdirectory name under tmpBase for the userDataDir
- *                            (default: 'OpenCode Model Manager').  The secret
+ *                            (default: 'OpenCode Agent Manager').  The secret
  *                            and prefs.json are written here.
  *   noSecret               — if true, skip writing gate-secret.key (null secret).
  *   passExplicitUserDataDir — if true, pass `--userDataDir <computed userDataDir>`
@@ -184,7 +184,7 @@ async function spawnServer() {
 async function spawnServerWith(opts = {}) {
   const tmpBase = await fs.mkdtemp(path.join(os.tmpdir(), 'gate-mcp-test2-'))
 
-  const userDataDirName = opts.userDataDirName || 'OpenCode Model Manager'
+  const userDataDirName = opts.userDataDirName || 'OpenCode Agent Manager'
   const userDataDir = path.join(tmpBase, userDataDirName)
   await fs.mkdir(userDataDir, { recursive: true })
 
@@ -518,13 +518,13 @@ describe('gate-mcp-server', () => {
 
   // ── 7. userData: package-name candidate (dev-dir resolution) ──────────────
   //
-  // Secret lives in <APPDATA>/opencode-model-gui (the package `name`).
+  // Secret lives in <APPDATA>/opencode-agent-gui (the package `name`).
   // No --userDataDir arg is passed.  The multi-candidate probe must find
-  // opencode-model-gui BEFORE OpenCode Model Manager (package-name first).
+  // opencode-agent-gui BEFORE OpenCode Agent Manager (package-name first).
 
-  it('userData: secret in opencode-model-gui candidate resolves without --userDataDir', async () => {
+  it('userData: secret in opencode-agent-gui candidate resolves without --userDataDir', async () => {
     // Place secret in the package-name dir, not the product-name dir.
-    ctx = await spawnServerWith({ userDataDirName: 'opencode-model-gui' })
+    ctx = await spawnServerWith({ userDataDirName: 'opencode-agent-gui' })
     const { send, reader, secret, requestsDir, decisionsDir } = ctx
 
     send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05', capabilities: {} } })
@@ -571,7 +571,7 @@ describe('gate-mcp-server', () => {
   // ── 8. userData: explicit --userDataDir override ───────────────────────────
   //
   // Secret lives in 'custom-explicit-dir', which is NOT one of the auto-probe
-  // candidates (opencode-model-gui / OpenCode Model Manager).  Without the
+  // candidates (opencode-agent-gui / OpenCode Agent Manager).  Without the
   // --userDataDir arg the probe would fall back to candidates[0] (wrong dir,
   // no secret), but the explicit arg passes the correct path → approve works.
 

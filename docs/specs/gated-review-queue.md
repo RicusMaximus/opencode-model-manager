@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | Draft — ready for orchestrator |
 | **Date** | 2026-06-25 |
-| **Target component** | OpenCode Model Manager (Electron + React) + a gate tool consumed by the opencode runtime |
+| **Target component** | OpenCode Agent Manager (Electron + React) + a gate tool consumed by the opencode runtime |
 | **Primary surfaces** | `electron/main.js`, `electron/preload.js`, `src/App.jsx`, new `src/components/ReviewQueuePanel.jsx`, new gate tool (MCP server / script) |
 | **Owner** | Rico Robinson |
 | **Implementation** | NOT in scope for this document — this is a design hand-off for an agent orchestrator |
@@ -18,7 +18,7 @@ The agent team defined in `AGENTS.md` follows a **Gated Multi-Agent Orchestratio
 This spec defines the gate as a real, two-part system:
 
 1. A **filesystem-backed review queue** (a message bus between two processes that share no memory: the opencode runtime and this Electron app).
-2. A **gate tool** the orchestrator calls that submits a review request and **blocks** until a human decision is returned, and a **Review Queue UI** in the model manager where the human approves, rejects-with-notes, or annotates.
+2. A **gate tool** the orchestrator calls that submits a review request and **blocks** until a human decision is returned, and a **Review Queue UI** in the agent manager where the human approves, rejects-with-notes, or annotates.
 
 The central design constraint is **trust**: both processes run as the same OS user, so a decision must be **unforgeable by the agent**. The spec's security model (HMAC-signed decisions + path confinement + no code execution) is what turns "two processes sharing a folder" into an actual gate.
 
@@ -41,7 +41,7 @@ Two concrete gaps today:
 
 ### Goals
 1. The orchestrator can **block** at the design→build boundary via a single synchronous gate tool call that returns a verdict (`approved` / `rejected` + notes).
-2. A human can **see queued reviews** in the model manager, open one, view its design artifacts **side by side**, and **approve / reject-with-notes / annotate**.
+2. A human can **see queued reviews** in the agent manager, open one, view its design artifacts **side by side**, and **approve / reject-with-notes / annotate**.
 3. A rejected decision carries notes back to the orchestrator, which re-spawns only the flagged design agent — modeling the three-state machine (`Pending review` / `Approved` / `Rejected with notes`) from `AGENTS.md`.
 4. A decision is **unforgeable by the agent**: the runtime cannot self-approve. Approval authority rests on a cryptographic signature, not on filesystem presence.
 5. All untrusted inputs (request files, artifact paths, rendered content) are validated and confined; the app never executes artifact content.
@@ -346,9 +346,9 @@ writes the archive atomically **before** unlinking the decision, so there is no
 window in which both files are absent.
 
 **Bug 2 — productName/userData mismatch in dev.** The tools derived the secret
-directory from the `build.productName` (`"OpenCode Model Manager"`), but Electron
+directory from the `build.productName` (`"OpenCode Agent Manager"`), but Electron
 in dev derives `app.getPath('userData')` from the package `name`
-(`"opencode-model-gui"`). The tool therefore looked in the wrong directory,
+(`"opencode-agent-gui"`). The tool therefore looked in the wrong directory,
 never found `gate-secret.key`, and failed **every** decision closed. **Fix:**
 (a) `gate:setup-mcp-entry` now embeds `--userDataDir <app.getPath('userData')>`
 into the `mcp.gate` args, and the tools use that explicit path when present;

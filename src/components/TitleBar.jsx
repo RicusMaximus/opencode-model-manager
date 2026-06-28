@@ -41,7 +41,7 @@ export default function TitleBar({ configPath, onBrowse }) {
   return (
     <div className="titlebar">
       <div className="titlebar-left">
-        <span className="titlebar-app-name">OpenCode Model Manager</span>
+        <span className="titlebar-app-name">OpenCode Agent Manager</span>
         <div className="titlebar-divider" />
         <span className="titlebar-config-path">{displayPath}</span>
       </div>

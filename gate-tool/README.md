@@ -44,8 +44,8 @@ Artifact `path`s must be relative to the opencode `configDir`.
 
 The HMAC secret is read from `<userData>/gate-secret.key`, and Electron derives
 `userData` differently depending on how the app runs: from the package `name`
-(`"opencode-model-gui"`) in **dev**, but from `build.productName`
-(`"OpenCode Model Manager"`) once **packaged**. The tool resolves this coupling
+(`"opencode-agent-gui"`) in **dev**, but from `build.productName`
+(`"OpenCode Agent Manager"`) once **packaged**. The tool resolves this coupling
 automatically — you no longer need to hand-edit `PRODUCT_NAME` to switch modes:
 
 1. **Explicit path wins.** The app's **"Setup Gate"** button embeds the real
@@ -64,9 +64,9 @@ bytes — so the trust model is preserved. (If you rename **both** the package
 
 | Platform | Path(s) probed |
 |---|---|
-| Windows | `%APPDATA%\opencode-model-gui\gate-secret.key`, then `%APPDATA%\OpenCode Model Manager\gate-secret.key` |
-| macOS | `~/Library/Application Support/opencode-model-gui/gate-secret.key`, then `.../OpenCode Model Manager/gate-secret.key` |
-| Linux | `${XDG_CONFIG_HOME:-~/.config}/opencode-model-manager/gate-secret.key` |
+| Windows | `%APPDATA%\opencode-agent-gui\gate-secret.key`, then `%APPDATA%\OpenCode Agent Manager\gate-secret.key` |
+| macOS | `~/Library/Application Support/opencode-agent-gui/gate-secret.key`, then `.../OpenCode Agent Manager/gate-secret.key` |
+| Linux | `${XDG_CONFIG_HOME:-~/.config}/opencode-agent-manager/gate-secret.key` |
 
 The app **owns** creation of this key. The tool only ever **reads** it; if it is
 absent the tool fails closed (it never creates the key).
