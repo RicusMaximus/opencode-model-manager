@@ -1,0 +1,144 @@
+// ── Components: Claude (subscription) provider card ─────────────────────────
+// Shown at the top of the Models screen. Status pill + start/stop for the
+// manager-supervised OpenAI-wrapper process.
+
+.models-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.subscription-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.subscription-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.subscription-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.subscription-card-name {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.subscription-card-actions {
+  flex-shrink: 0;
+}
+
+// ── Status pill ──────────────────────────────────────────────────────────────
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+
+  .status-pill-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  &.green  { color: var(--accent-green); border-color: rgba(102, 222, 112, .4); }
+  &.amber  { color: var(--accent-yellow); border-color: rgba(250, 191, 69, .4); }
+  &.red    { color: var(--red-danger);   border-color: rgba(192, 57, 43, .5); }
+  &.gray   { color: var(--text-dim); }
+}
+
+.subscription-card-desc {
+  margin: 12px 0 0;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+
+  .mono { font-family: var(--font-mono); color: var(--text-primary); }
+}
+
+.subscription-card-hint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+
+  .mono { font-family: var(--font-mono); }
+
+  &.warn {
+    background: rgba(250, 191, 69, .08);
+    border: 1px solid rgba(250, 191, 69, .35);
+    color: var(--text-secondary);
+  }
+  &.err {
+    background: rgba(192, 57, 43, .08);
+    border: 1px solid rgba(192, 57, 43, .4);
+    color: var(--text-secondary);
+  }
+}
+
+.subscription-card-logs {
+  margin: 8px 0 0;
+  padding: 8px;
+  max-height: 120px;
+  overflow: auto;
+  background: var(--bg-deep);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+
+.subscription-card-meta {
+  margin-top: 12px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-dim);
+
+  .mono { font-family: var(--font-mono); color: var(--text-secondary); }
+}
+
+.subscription-card-models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.subscription-model-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--bg-workspace);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}

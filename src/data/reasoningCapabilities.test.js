@@ -162,4 +162,37 @@ describe('resolveReasoningCapability', () => {
       expect(cap.mechanism).not.toBe('variant')
     }
   })
+
+  // ── Claude (subscription) wrapper provider ─────────────────────────────────
+  // The claude-sub/* models must resolve to the SAME variant rules as their
+  // Anthropic family (claude-code-subscription-provider.md §6).
+
+  it('claude-sub Opus 4.8: variant with xhigh (aliases the Anthropic family)', () => {
+    const cap = resolveReasoningCapability('claude-sub/claude-opus-4-8')
+    expect(cap.mechanism).toBe('variant')
+    expect(cap.levels).toContain('xhigh')
+    expect(cap.levels).toContain('max')
+    expect(cap.supported).toBe(true)
+    expect(cap.source).toBe('registry-family')
+  })
+
+  it('claude-sub Sonnet 4.6: variant with max but not xhigh', () => {
+    const cap = resolveReasoningCapability('claude-sub/claude-sonnet-4-6')
+    expect(cap.mechanism).toBe('variant')
+    expect(cap.levels).toContain('max')
+    expect(cap.levels).not.toContain('xhigh')
+  })
+
+  it('claude-sub Haiku 4.5 (dated id): variant with only high and max', () => {
+    const cap = resolveReasoningCapability('claude-sub/claude-haiku-4-5-20251001')
+    expect(cap.mechanism).toBe('variant')
+    expect(cap.levels).toEqual(['high', 'max'])
+  })
+
+  it('Unknown claude-sub model: returns none, not fallback', () => {
+    const cap = resolveReasoningCapability('claude-sub/some-future-model')
+    expect(cap.mechanism).toBe('none')
+    expect(cap.supported).toBe(false)
+    expect(cap.source).toBe('registry-family')
+  })
 })

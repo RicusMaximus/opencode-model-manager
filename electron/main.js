@@ -23,6 +23,11 @@ const {
 const scaffoldEngine = require('./scaffold/engine')
 const { runDoctor } = require('./scaffold/doctor')
 const { MCP_CATALOG, SKILLS_CATALOG } = require('./scaffold/catalog')
+const wrapperSupervisor = require('./wrapper/supervisor')
+const wrapperDoctor = require('./wrapper/doctor')
+const wrapperProvider = require('./wrapper/provider')
+const wrapperInstaller = require('./wrapper/installer')
+const { WRAPPER_DESCRIPTOR, buildRunCommand } = require('./wrapper/descriptor')
 
 const isDev = process.env.NODE_ENV === 'development'
 const DEFAULT_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode')
@@ -940,4 +945,157 @@ ipcMain.handle('scaffold:doctor', async (_event, selections) => {
   } catch (err) {
     return { error: err.message }
   }
+})
+
+// ── Claude Code Subscription Provider (managed wrapper) ──────────────────────
+// The wrapper is a manager-supervised local process exposing an OpenAI-compatible
+// shim over the user's Claude subscription (spec claude-code-subscription-provider).
+//
+// The provider block lives in the GLOBAL config (~/.config/opencode), NOT the
+// active workspace. Rationale: the wrapper is ONE machine-local process billed to
+// ONE subscription — global infrastructure, not per-client. OpenCode deep-merges
+// global + project config at runtime, so a globally-defined `provider.claude-sub`
+// is visible to every project; a project only overrides it by re-declaring the
+// same key. (The app's "project-only" editing model governs which file the GUI
+// edits — it does not change how OpenCode merges config when it runs agents.)
+//
+// So: provider block + its secrets (client-guard / api-key) resolve against the
+// global dir, while CLAUDE_CWD still points at the active project so Claude Code
+// file tools scope correctly.
+
+// The true global config dir (independent of the active workspace). Ensures it
+// exists before we write the provider block into it.
+async function getGlobalConfigDir() {
+  await fs.mkdir(DEFAULT_CONFIG_DIR, { recursive: true })
+  return DEFAULT_CONFIG_DIR
+}
+
+// The managed wrapper install lives under userData (machine-local, outside any
+// client repo) — same trust boundary as the gate secret.
+function getWrapperInstallDir() {
+  return wrapperInstaller.getInstallDir(app.getPath('userData'))
+}
+
+// Static facts for the Models screen (provider name, models, auth profiles).
+ipcMain.handle('wrapper:descriptor', async () => {
+  return {
+    id: WRAPPER_DESCRIPTOR.id,
+    name: WRAPPER_DESCRIPTOR.name,
+    models: WRAPPER_DESCRIPTOR.models,
+    defaultAuthProfile: WRAPPER_DESCRIPTOR.defaultAuthProfile,
+    authProfiles: Object.values(WRAPPER_DESCRIPTOR.authProfiles).map((p) => ({ id: p.id, label: p.label })),
+  }
+})
+
+// Is the upstream wrapper cloned + venv built? (gates Start; drives the UI).
+ipcMain.handle('wrapper:install-status', async () => {
+  const dir = getWrapperInstallDir()
+  return {
+    installed: wrapperInstaller.isInstalled(dir),
+    installDir: dir,
+    meta: await wrapperInstaller.readMeta(dir),
+  }
+})
+
+// Clone + venv + pip install, streaming progress to the renderer (spec §11).
+ipcMain.handle('wrapper:install', async () => {
+  const dir = getWrapperInstallDir()
+  try {
+    const meta = await wrapperInstaller.install(dir, {
+      onProgress: (line) => mainWindow?.webContents?.send('wrapper:install-progress', String(line)),
+    })
+    return { success: true, meta }
+  } catch (err) {
+    mainWindow?.webContents?.send('wrapper:install-progress', `\nINSTALL FAILED: ${err.message}\n`)
+    return { success: false, error: err.message }
+  }
+})
+
+// Live status for the status pill (state / port / profile / models / log tail).
+ipcMain.handle('wrapper:status', async () => {
+  return wrapperSupervisor.getStatus()
+})
+
+// The model list the Models screen + agent dropdown should offer: live list when
+// the wrapper is running, else the static fallback.
+ipcMain.handle('wrapper:models', async () => {
+  const status = wrapperSupervisor.getStatus()
+  return { models: status.models || WRAPPER_DESCRIPTOR.models }
+})
+
+// Start (idempotent). Provider block + secrets → GLOBAL config; CLAUDE_CWD →
+// active workspace (so Claude Code tools scope to the project the user is in).
+// The launch command is built from the venv Python produced by the installer.
+ipcMain.handle('wrapper:start', async (_event, opts) => {
+  try {
+    const installDir = getWrapperInstallDir()
+    if (!wrapperInstaller.isInstalled(installDir)) {
+      return { state: 'stopped', error: 'not-installed' }
+    }
+    const globalDir = await getGlobalConfigDir()
+    const activeDir = await getConfigDir()
+    const venvPython = wrapperInstaller.getVenvPython(installDir)
+    return await wrapperSupervisor.ensureWrapper({
+      profile: opts?.profile,
+      projectDir: isGlobalConfigDir(activeDir) ? undefined : activeDir,
+      configDir: globalDir,
+      runnerCwd: installDir,
+      command: buildRunCommand(venvPython),
+      detach: !!opts?.detach,
+    })
+  } catch (err) {
+    return { state: 'crashed', error: err.message }
+  }
+})
+
+ipcMain.handle('wrapper:stop', async () => {
+  try {
+    return await wrapperSupervisor.stopWrapper()
+  } catch (err) {
+    return { state: 'crashed', error: err.message }
+  }
+})
+
+// Repair/write the provider block (into GLOBAL config) without (re)starting —
+// uses the live port if running, else the descriptor default.
+ipcMain.handle('wrapper:write-provider', async (_event, opts) => {
+  try {
+    const globalDir = await getGlobalConfigDir()
+    const status = wrapperSupervisor.getStatus()
+    const port = status.port || WRAPPER_DESCRIPTOR.process.port
+    const clientGuard = (opts?.profile || '').includes?.('client-guard') ?? false
+    const result = await wrapperProvider.writeProviderBlock(globalDir, { port, clientGuard })
+    return { success: true, ...result }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// Re-runnable diagnostics (spec §10) — config drift + secrets checked against
+// the GLOBAL config where the provider block + its secrets live.
+ipcMain.handle('wrapper:doctor', async (_event, opts) => {
+  try {
+    const globalDir = await getGlobalConfigDir()
+    const status = wrapperSupervisor.getStatus()
+    return await wrapperDoctor.runDoctor(globalDir, {
+      profile: opts?.profile,
+      port: status.port || WRAPPER_DESCRIPTOR.process.port,
+    })
+  } catch (err) {
+    return { error: err.message }
+  }
+})
+
+// Stop the supervised wrapper on quit unless the user pinned a detached instance
+// (spec §8 rule 5). will-quit lets us await the graceful SIGTERM→SIGKILL.
+let wrapperTornDown = false
+app.on('will-quit', (event) => {
+  if (wrapperTornDown) return
+  const status = wrapperSupervisor.getStatus()
+  if (status.state === 'stopped' || status.detached) return
+  event.preventDefault()
+  wrapperSupervisor.stopOnQuit().finally(() => {
+    wrapperTornDown = true
+    app.quit()
+  })
 })

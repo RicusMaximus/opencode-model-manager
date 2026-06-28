@@ -37,6 +37,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   runScaffold: (selections) => ipcRenderer.invoke('scaffold:sync', selections),
   doctorScaffold: (selections) => ipcRenderer.invoke('scaffold:doctor', selections),
 
+  // Claude (subscription) wrapper provider
+  getWrapperDescriptor: () => ipcRenderer.invoke('wrapper:descriptor'),
+  getWrapperStatus: () => ipcRenderer.invoke('wrapper:status'),
+  getWrapperModels: () => ipcRenderer.invoke('wrapper:models'),
+  getWrapperInstallStatus: () => ipcRenderer.invoke('wrapper:install-status'),
+  installWrapper: () => ipcRenderer.invoke('wrapper:install'),
+  startWrapper: (opts) => ipcRenderer.invoke('wrapper:start', opts),
+  stopWrapper: () => ipcRenderer.invoke('wrapper:stop'),
+  writeWrapperProvider: (opts) => ipcRenderer.invoke('wrapper:write-provider', opts),
+  doctorWrapper: (opts) => ipcRenderer.invoke('wrapper:doctor', opts),
+  // Streamed install progress; returns an unsubscribe function.
+  onWrapperInstallProgress: (cb) => {
+    const l = (_e, line) => cb(line)
+    ipcRenderer.on('wrapper:install-progress', l)
+    return () => ipcRenderer.removeListener('wrapper:install-progress', l)
+  },
+
   // System info
   getSystemInfo: () => ipcRenderer.invoke('system:get-info'),
 

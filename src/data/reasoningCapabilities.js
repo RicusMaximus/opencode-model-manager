@@ -101,6 +101,18 @@ export const REASONING_CAPABILITIES = {
     { prefix: 'anthropic/claude-haiku-4',  cap: { mechanism: 'variant', levels: ['high', 'max'], default: 'high' } },
     // Anthropic: all other Claude models default to no effort support
     { prefix: 'anthropic/',                cap: { mechanism: 'none', levels: [], default: null } },
+
+    // ── Claude (subscription) via the OpenAI-wrapper provider ──────────────────
+    // Provider prefix is `claude-sub`, but reasoning capability keys on the model
+    // FAMILY, not the provider — so these alias to the same Anthropic variant rules
+    // (claude-code-subscription-provider.md §6). Order: most-specific first.
+    { prefix: 'claude-sub/claude-opus-4-8',   cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'xhigh', 'max'], default: 'high' } },
+    { prefix: 'claude-sub/claude-opus-4-7',   cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'xhigh', 'max'], default: 'high' } },
+    { prefix: 'claude-sub/claude-opus-4',     cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'max'], default: 'high' } },
+    { prefix: 'claude-sub/claude-sonnet-4',   cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'max'], default: 'medium' } },
+    { prefix: 'claude-sub/claude-haiku-4',    cap: { mechanism: 'variant', levels: ['high', 'max'], default: 'high' } },
+    { prefix: 'claude-sub/',                  cap: { mechanism: 'none', levels: [], default: null } },
+
     // OpenAI o-series
     { prefix: 'openai/o1', cap: { mechanism: 'reasoningEffort', levels: ['low', 'medium', 'high'], default: 'medium' } },
     { prefix: 'openai/o3', cap: { mechanism: 'reasoningEffort', levels: ['low', 'medium', 'high'], default: 'medium' } },

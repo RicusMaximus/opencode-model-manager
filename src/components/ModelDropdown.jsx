@@ -12,6 +12,17 @@ const CLOUD_MODELS = [
   { id: 'google/gemini-1.5-pro',       name: 'Gemini 1.5 Pro',    provider: 'google'    },
 ]
 
+// Claude models billed against the user's subscription, served by the managed
+// OpenAI-wrapper provider. IDs use the `claude-sub/` prefix per the provider's
+// model-id convention (claude-code-subscription-provider.md §6). This static set
+// is the fallback; the live list (from the running wrapper's /v1/models) replaces
+// it at runtime so the dropdown only offers models the subscription actually serves.
+const DEFAULT_SUBSCRIPTION_MODELS = [
+  { id: 'claude-sub/claude-opus-4-8',           name: 'Opus 4.8 (subscription)'  },
+  { id: 'claude-sub/claude-sonnet-4-6',         name: 'Sonnet 4.6 (subscription)' },
+  { id: 'claude-sub/claude-haiku-4-5-20251001', name: 'Haiku 4.5 (subscription)' },
+]
+
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 function ChevronIcon({ size = 12 }) {
@@ -36,10 +47,12 @@ function normalizeName(name) {
   return name?.replace(/:latest$/, '') ?? name
 }
 
-function getDisplayName(modelId, ollamaModels) {
+function getDisplayName(modelId, ollamaModels, subModels = DEFAULT_SUBSCRIPTION_MODELS) {
   if (!modelId) return ''
   const cloud = CLOUD_MODELS.find((m) => m.id === modelId)
   if (cloud) return cloud.name
+  const sub = subModels.find((m) => m.id === modelId)
+  if (sub) return sub.name
   const ollamaPrefix = 'ollama/'
   const bareId = modelId.startsWith(ollamaPrefix) ? modelId.slice(ollamaPrefix.length) : modelId
   const normalized = normalizeName(bareId)
@@ -53,10 +66,27 @@ function getDisplayName(modelId, ollamaModels) {
 export default function ModelDropdown({ value, onChange, ollamaModels = [] }) {
   const [open,  setOpen]  = useState(false)
   const [query, setQuery] = useState('')
+  const [subModels, setSubModels] = useState(DEFAULT_SUBSCRIPTION_MODELS)
   const wrapRef  = useRef(null)
   const inputRef = useRef(null)
 
-  const displayName = getDisplayName(value, ollamaModels)
+  // Replace the static subscription list with what the running wrapper serves.
+  useEffect(() => {
+    const api = window.electronAPI
+    if (!api?.getWrapperModels) return
+    api
+      .getWrapperModels()
+      .then((res) => {
+        const live = (res?.models || []).map((m) => ({
+          id: `claude-sub/${m.id}`,
+          name: `${m.name || m.id} (subscription)`,
+        }))
+        if (live.length > 0) setSubModels(live)
+      })
+      .catch(() => {})
+  }, [])
+
+  const displayName = getDisplayName(value, ollamaModels, subModels)
 
   // ── Filter ────────────────────────────────────────────────────────────────
 
@@ -64,10 +94,11 @@ export default function ModelDropdown({ value, onChange, ollamaModels = [] }) {
   const hit = (text) => !q || text.toLowerCase().includes(q)
 
   const filteredOllama    = ollamaModels.filter((m) => hit(normalizeName(m.name)))
+  const filteredSub       = subModels.filter((m) => hit(m.name) || hit(m.id))
   const filteredAnthropic = CLOUD_MODELS.filter((m) => m.provider === 'anthropic' && (hit(m.name) || hit(m.id)))
   const filteredOpenai    = CLOUD_MODELS.filter((m) => m.provider === 'openai'    && (hit(m.name) || hit(m.id)))
   const filteredGoogle    = CLOUD_MODELS.filter((m) => m.provider === 'google'    && (hit(m.name) || hit(m.id)))
-  const hasResults = filteredOllama.length + filteredAnthropic.length + filteredOpenai.length + filteredGoogle.length > 0
+  const hasResults = filteredOllama.length + filteredSub.length + filteredAnthropic.length + filteredOpenai.length + filteredGoogle.length > 0
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
@@ -174,6 +205,15 @@ export default function ModelDropdown({ value, onChange, ollamaModels = [] }) {
                       />
                     )
                   })}
+                </>
+              )}
+
+              {filteredSub.length > 0 && (
+                <>
+                  <div className="model-dropdown-section-header">Claude · Subscription</div>
+                  {filteredSub.map((m) => (
+                    <Option key={m.id} id={m.id} label={m.name} isSelected={value === m.id} />
+                  ))}
                 </>
               )}
 
