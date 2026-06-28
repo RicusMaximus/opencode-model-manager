@@ -28,7 +28,7 @@ function CloseIcon() {
   )
 }
 
-export default function TitleBar({ configPath, onBrowse }) {
+export default function TitleBar({ configPath, onBrowse, onScaffold, scaffoldDisabled }) {
   const handleMinimize = () => api?.minimizeWindow()
   const handleMaximize = () => api?.maximizeWindow()
   const handleClose = () => api?.closeWindow()
@@ -46,6 +46,16 @@ export default function TitleBar({ configPath, onBrowse }) {
         <span className="titlebar-config-path">{displayPath}</span>
       </div>
       <div className="titlebar-right">
+        <button
+          className="btn btn--secondary btn--sm"
+          onClick={onScaffold}
+          disabled={scaffoldDisabled}
+          title={scaffoldDisabled
+            ? 'Browse to a project folder to scaffold (disabled for the global config)'
+            : 'Scaffold this project'}
+        >
+          Scaffold project
+        </button>
         <button className="btn btn--secondary btn--sm" onClick={onBrowse}>
           Browse
         </button>

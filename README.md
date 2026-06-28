@@ -34,6 +34,7 @@ A desktop GUI for configuring [OpenCode](https://opencode.ai) — assign LLM mod
   - [Agent config defaults](#agent-config-defaults)
 - [Gated approval workflow](#gated-approval-workflow)
 - [Obsidian project memory](#obsidian-project-memory)
+- [Scaffold a project](#scaffold-a-project)
 - [Prerequisites](#prerequisites)
 - [Getting started](#getting-started)
 - [Configuration & data locations](#configuration--data-locations)
@@ -246,6 +247,46 @@ Agents can then record decisions, design rationale, and ongoing context as notes
 
 ---
 
+## Scaffold a project
+
+The **Scaffold project** button in the title bar sets up a new client repo for the agentic OpenCode workflow in one click. It targets the **active workspace** (the folder you've selected via **Browse**) — there's no separate folder picker, and the button is disabled when you're pointed at the global OpenCode config so you never scaffold into it.
+
+Clicking it opens a **capability form** where you pick only what the project needs:
+
+- **MCP servers** from a bundled catalog (figma, stitch, mendix, obsidian), each with an **auth profile**. The profile decides what gets generated — Stitch *OAuth* needs no secret, Stitch *API key* needs one; Figma *local desktop* needs none, Figma *remote* needs a token.
+- **Skills** from a bundled catalog (written into `skill/<name>/SKILL.md`).
+- An **Obsidian project-memory vault** (copied from `obsidian-project-memory/`).
+- A **`specs/`** folder (SDD design-spec template).
+- The **`.opencode-secrets/`** folder — auto-included whenever a selected server's profile needs a secret file.
+
+A live preview shows exactly what will be created vs. skipped before you confirm.
+
+### What it generates
+
+```
+<project-root>/
+├─ opencode.jsonc                       # merged: MCP entries, inline config, secret {file:} refs
+├─ .opencode-secrets/
+│   ├─ <name>            (git-ignored)  # real value, placeholder until you fill it
+│   ├─ <name>.example   (committed)
+│   └─ README.md        (committed)     # auto-generated "active matrix"
+├─ skill/<name>/SKILL.md (committed)    # per selected skill
+├─ specs/                               # if selected: README + SDD template
+├─ <memory-folder>/     (vault)         # if selected
+└─ .gitignore           (secrets block appended)
+```
+
+### Guarantees
+
+- **Auth-aware** — generates files **only** for the secret inputs the active profile actually requires; `config` inputs go inline, `external` inputs (gcloud ADC, desktop apps, local ports) generate nothing and become health checks.
+- **Idempotent & additive** — re-runnable. A real secret file is never overwritten, `opencode.jsonc` is deep-merged (preserving `$schema`, unknown fields, and sibling MCP entries), and anything already present is reported as *skipped*.
+- **Secrets never committed** — an authoritative `.gitignore` block ignores `/.opencode-secrets/*` while re-including `*.example` and `README.md`. In a non-git folder it warns loudly instead.
+- A **post-scaffold summary** lists what was created/skipped and which required secrets still need a real value.
+
+> The scaffolder only ever uses commands/URLs from the bundled catalog (never free-form input) and writes solely within the active workspace, so it can't run an arbitrary command or leak one client's credentials into another's repo.
+
+---
+
 ## Prerequisites
 
 | Tool | Version |
@@ -368,6 +409,10 @@ opencode-agent-manager/
 │       ├── security.js         # HMAC sign/verify + confinePath path-confinement
 │       ├── schema.js           # request/decision validators
 │       └── bus.js              # .gate/ filesystem ops (requests/decisions/archive/audit)
+│   └── scaffold/               # Project Scaffolding Tool (engine side)
+│       ├── catalog.js          # Bundled MCP + skills catalog
+│       ├── engine.js           # computePlan / mergeConfig / sync / preview
+│       └── doctor.js           # Per-input-kind health checks
 ├── gate-tool/                  # Runtime-side gate (spawned by OpenCode, not Electron)
 │   ├── gate-mcp-server.js      # Blocking submit_for_review MCP server (preferred host)
 │   ├── gate-submit.js          # Bash fallback CLI (same submit+poll+verify logic)
@@ -385,8 +430,9 @@ opencode-agent-manager/
 │   │   ├── ReviewQueuePanel.jsx# Approval gate UI (artifacts + checklist + decide)
 │   │   ├── RightSidebar.jsx    # Contextual detail panel
 │   │   ├── Sidebar.jsx         # Left navigation (Agents/Models/Review Queue/System)
+│   │   ├── ScaffoldModal.jsx   # Project scaffolding capability form
 │   │   ├── StatusBar.jsx       # Ollama status + Save button
-│   │   └── TitleBar.jsx        # Frameless custom title bar + folder picker
+│   │   └── TitleBar.jsx        # Frameless custom title bar + Scaffold/Browse
 │   ├── data/
 │   │   ├── agentDefaults.js        # Single source of editable-field defaults
 │   │   └── reasoningCapabilities.js# Model→reasoning capability registry
@@ -418,6 +464,11 @@ The renderer talks to the main process exclusively through `window.electronAPI` 
 | `readAgentFile(agentId)` | `agent:read-file` | Read raw `agents/<id>.agent.md` |
 | `writeAgentFile(agentId, content)` | `agent:write-file` | Atomic write of the raw `.agent.md` |
 | `listSkills()` | `skills:list` | Scan `skill/` and `skills/` for skills |
+| `getScaffoldCatalog()` | `scaffold:catalog` | Bundled MCP + skills catalog (for the form) |
+| `getScaffoldTarget()` | `scaffold:target-info` | Active workspace root/name + `isGlobal`/`isGit` flags |
+| `previewScaffold(selections)` | `scaffold:preview` | Dry-run: files that would be created vs. skipped |
+| `runScaffold(selections)` | `scaffold:sync` | Execute the scaffold; returns `{ created, skipped, needsFill, warnings }` |
+| `doctorScaffold(selections)` | `scaffold:doctor` | Re-runnable per-input health checks |
 | `listReviews()` | `gate:list` | Pending reviews (queue items) |
 | `listArchivedReviews()` | `gate:list-archive` | Decided reviews (History tab) |
 | `readReview(id)` | `gate:read` | One review's request + confined, size-capped artifacts |

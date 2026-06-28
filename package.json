@@ -41,6 +41,12 @@
       "dist/**/*",
       "electron/**/*",
       "gate-tool/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "obsidian-project-memory",
+        "to": "obsidian-project-memory"
+      }
     ]
   }
 }

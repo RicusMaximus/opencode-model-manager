@@ -7,6 +7,7 @@ import OllamaPanel from "./components/OllamaPanel.jsx";
 import ReviewQueuePanel from "./components/ReviewQueuePanel.jsx";
 import RightSidebar from "./components/RightSidebar.jsx";
 import StatusBar from "./components/StatusBar.jsx";
+import ScaffoldModal from "./components/ScaffoldModal.jsx";
 import { applyAgentDefaults } from "./data/agentDefaults.js";
 
 const api = window.electronAPI;
@@ -81,6 +82,8 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [scaffoldOpen, setScaffoldOpen] = useState(false);
+  const [scaffoldTarget, setScaffoldTarget] = useState(null);
 
   // Snapshot for dirty-check — initialised after config load
   const originalRef = useRef(null);
@@ -172,6 +175,17 @@ export default function App() {
       clearInterval(sysTimer);
     };
   }, []);
+
+  // ── Scaffold target info (drives the title-bar button + modal header) ──
+  // Re-resolved whenever the active workspace changes (Browse), so the button
+  // disables when pointed at the global config (spec §10 edge case 1).
+  useEffect(() => {
+    if (!api?.getScaffoldTarget) return;
+    api
+      .getScaffoldTarget()
+      .then(setScaffoldTarget)
+      .catch(() => setScaffoldTarget(null));
+  }, [configPath]);
 
   // ── Pending review count (sidebar badge) ──────────────────────────
   useEffect(() => {
@@ -346,7 +360,23 @@ export default function App() {
 
   return (
     <div className="app-root">
-      <TitleBar configPath={configPath} onBrowse={handleBrowse} />
+      <TitleBar
+        configPath={configPath}
+        onBrowse={handleBrowse}
+        onScaffold={() => setScaffoldOpen(true)}
+        scaffoldDisabled={scaffoldTarget?.isGlobal ?? false}
+      />
+      {scaffoldOpen && (
+        <ScaffoldModal
+          onClose={() => setScaffoldOpen(false)}
+          onScaffolded={() => {
+            // Refresh skills so a newly-scaffolded skill surfaces in the picker.
+            if (api) {
+              api.listSkills().then((d) => setSkills(d?.skills || [])).catch(() => {});
+            }
+          }}
+        />
+      )}
       <div className="app-body">
         <Sidebar
           activeView={activeView}

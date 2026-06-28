@@ -20,6 +20,9 @@ const {
   archiveReview,
   appendAuditEntry,
 } = require('./gate/bus')
+const scaffoldEngine = require('./scaffold/engine')
+const { runDoctor } = require('./scaffold/doctor')
+const { MCP_CATALOG, SKILLS_CATALOG } = require('./scaffold/catalog')
 
 const isDev = process.env.NODE_ENV === 'development'
 const DEFAULT_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode')
@@ -461,14 +464,17 @@ ipcMain.handle('config:write', async (_event, { agents, defaultModel, ollamaProv
   const configPath = path.join(configDir, 'opencode.jsonc')
   const tmpPath = configPath + '.tmp'
 
-  // Recover schema URL from existing file
-  let schema = 'https://opencode.ai/config.json'
+  // Recover the existing config so we can preserve $schema AND unknown top-level
+  // fields (e.g. the `mcp` block written by the scaffolder / gate setup, or extra
+  // providers). Without this, a Save would clobber scaffolded MCP entries.
+  let existing = {}
   try {
     const raw = await fs.readFile(configPath, 'utf8')
     const { default: strip } = await import('strip-json-comments')
-    const existing = JSON.parse(strip(raw))
-    schema = existing['$schema'] || schema
-  } catch { /* use default */ }
+    const parsed = JSON.parse(strip(raw))
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) existing = parsed
+  } catch { /* no existing config */ }
+  const schema = existing['$schema'] || 'https://opencode.ai/config.json'
 
   // Build agent block — persist all schema fields
   const agentBlock = {}
@@ -509,9 +515,13 @@ ipcMain.handle('config:write', async (_event, { agents, defaultModel, ollamaProv
     }
   }
 
+  // Spread existing first so unknown top-level fields (incl. `mcp` and any other
+  // providers) survive; then layer the blocks this handler owns on top.
   const config = {
+    ...existing,
     $schema: schema,
     provider: {
+      ...(existing.provider || {}),
       ollama: {
         npm: '@ai-sdk/openai-compatible',
         name: 'Ollama (local)',
@@ -853,5 +863,81 @@ ipcMain.handle('gate:setup-mcp-entry', async () => {
     return { success: true, serverPath }
   } catch (err) {
     return { success: false, error: err.message }
+  }
+})
+
+// ── Project Scaffolding Tool ────────────────────────────────────────────────
+// The scaffolder ALWAYS targets the active workspace (getConfigDir()) — there is
+// no folder argument (spec §8). Writes are confined to that root, so one client's
+// secrets can never leak into another's.
+
+// Resolve the bundled obsidian-project-memory template per dev/prod. Exposed to
+// the engine via SCAFFOLD_TEMPLATE_DIR so the engine stays Electron-free.
+function getTemplateDir() {
+  return isDev
+    ? path.join(__dirname, '..', 'obsidian-project-memory')
+    : path.join(process.resourcesPath, 'obsidian-project-memory')
+}
+
+// True when the active workspace is the global OpenCode config dir — the
+// scaffolder must never run there (spec §10 edge case 1).
+function isGlobalConfigDir(dir) {
+  return path.resolve(dir) === path.resolve(DEFAULT_CONFIG_DIR)
+}
+
+// Catalog for the form — strip nothing; descriptors are already serializable.
+ipcMain.handle('scaffold:catalog', async () => {
+  return { mcp: MCP_CATALOG, skills: SKILLS_CATALOG }
+})
+
+// Header/guard info: the project root, display name, and whether scaffolding is
+// allowed (disabled when pointed at the global config).
+ipcMain.handle('scaffold:target-info', async () => {
+  const root = await getConfigDir()
+  let isGit = false
+  try {
+    await fs.access(path.join(root, '.git'))
+    isGit = true
+  } catch { /* not a git repo */ }
+  return {
+    root,
+    name: path.basename(root) || root,
+    isGlobal: isGlobalConfigDir(root),
+    isGit,
+  }
+})
+
+// Dry run — what would be created vs skipped (powers the live preview). No writes.
+ipcMain.handle('scaffold:preview', async (_event, selections) => {
+  try {
+    const root = await getConfigDir()
+    if (isGlobalConfigDir(root)) return { error: 'global-config' }
+    return await scaffoldEngine.preview(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
+  } catch (err) {
+    return { error: err.message }
+  }
+})
+
+// Execute the scaffold against the active workspace.
+ipcMain.handle('scaffold:sync', async (_event, selections) => {
+  try {
+    const root = await getConfigDir()
+    if (isGlobalConfigDir(root)) return { error: 'global-config' }
+    process.env.SCAFFOLD_TEMPLATE_DIR = getTemplateDir()
+    const result = await scaffoldEngine.sync(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
+    return { success: true, ...result }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+})
+
+// Re-runnable diagnostics (spec §9) for the post-scaffold summary panel.
+ipcMain.handle('scaffold:doctor', async (_event, selections) => {
+  try {
+    const root = await getConfigDir()
+    if (isGlobalConfigDir(root)) return { error: 'global-config' }
+    return await runDoctor(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
+  } catch (err) {
+    return { error: err.message }
   }
 })

@@ -30,6 +30,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Skills
   listSkills: () => ipcRenderer.invoke('skills:list'),
 
+  // Project scaffolding
+  getScaffoldCatalog: () => ipcRenderer.invoke('scaffold:catalog'),
+  getScaffoldTarget: () => ipcRenderer.invoke('scaffold:target-info'),
+  previewScaffold: (selections) => ipcRenderer.invoke('scaffold:preview', selections),
+  runScaffold: (selections) => ipcRenderer.invoke('scaffold:sync', selections),
+  doctorScaffold: (selections) => ipcRenderer.invoke('scaffold:doctor', selections),
+
   // System info
   getSystemInfo: () => ipcRenderer.invoke('system:get-info'),
 
