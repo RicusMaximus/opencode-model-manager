@@ -15,12 +15,12 @@ const {
 } = require('../descriptor.js')
 
 describe('wrapper descriptor', () => {
-  it('exposes the static subscription model list with prefix-free ids', () => {
-    expect(WRAPPER_MODELS.map((m) => m.id)).toEqual([
-      'claude-opus-4-8',
-      'claude-sonnet-4-6',
-      'claude-haiku-4-5-20251001',
-    ])
+  it('exposes a static fallback list of ONLY subscription-served models (no API-only Opus 4.7/4.8)', () => {
+    const ids = WRAPPER_MODELS.map((m) => m.id)
+    expect(ids).toEqual(['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'])
+    // Hard guard: an API-only model must never be in the subscription fallback.
+    expect(ids).not.toContain('claude-opus-4-8')
+    expect(ids).not.toContain('claude-opus-4-7')
   })
 
   it('normalizes profiles to an array, defaulting to subscription', () => {

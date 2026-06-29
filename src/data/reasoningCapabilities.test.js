@@ -167,11 +167,11 @@ describe('resolveReasoningCapability', () => {
   // The claude-sub/* models must resolve to the SAME variant rules as their
   // Anthropic family (claude-code-subscription-provider.md §6).
 
-  it('claude-sub Opus 4.8: variant with xhigh (aliases the Anthropic family)', () => {
-    const cap = resolveReasoningCapability('claude-sub/claude-opus-4-8')
+  it('claude-sub Opus 4.6: variant with max but NO xhigh (subscription tops out below 4.7/4.8)', () => {
+    const cap = resolveReasoningCapability('claude-sub/claude-opus-4-6')
     expect(cap.mechanism).toBe('variant')
-    expect(cap.levels).toContain('xhigh')
     expect(cap.levels).toContain('max')
+    expect(cap.levels).not.toContain('xhigh') // xhigh is 4.7/4.8 only — API-only, never on the subscription
     expect(cap.supported).toBe(true)
     expect(cap.source).toBe('registry-family')
   })

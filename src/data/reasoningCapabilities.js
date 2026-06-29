@@ -105,9 +105,10 @@ export const REASONING_CAPABILITIES = {
     // ── Claude (subscription) via the OpenAI-wrapper provider ──────────────────
     // Provider prefix is `claude-sub`, but reasoning capability keys on the model
     // FAMILY, not the provider — so these alias to the same Anthropic variant rules
-    // (claude-code-subscription-provider.md §6). Order: most-specific first.
-    { prefix: 'claude-sub/claude-opus-4-8',   cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'xhigh', 'max'], default: 'high' } },
-    { prefix: 'claude-sub/claude-opus-4-7',   cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'xhigh', 'max'], default: 'high' } },
+    // (claude-code-subscription-provider.md §6). NOTE: the subscription tops out at
+    // Opus 4.6, which does NOT have the `xhigh` tier (that's 4.7/4.8, API-only). So
+    // there are deliberately no claude-sub 4.7/4.8 aliases — those models can't be
+    // served by the subscription. Order: most-specific first.
     { prefix: 'claude-sub/claude-opus-4',     cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'max'], default: 'high' } },
     { prefix: 'claude-sub/claude-sonnet-4',   cap: { mechanism: 'variant', levels: ['low', 'medium', 'high', 'max'], default: 'medium' } },
     { prefix: 'claude-sub/claude-haiku-4',    cap: { mechanism: 'variant', levels: ['high', 'max'], default: 'high' } },

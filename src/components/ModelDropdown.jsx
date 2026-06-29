@@ -12,16 +12,12 @@ const CLOUD_MODELS = [
   { id: 'google/gemini-1.5-pro',       name: 'Gemini 1.5 Pro',    provider: 'google'    },
 ]
 
-// Claude models billed against the user's subscription, served by the managed
-// OpenAI-wrapper provider. IDs use the `claude-sub/` prefix per the provider's
-// model-id convention (claude-code-subscription-provider.md §6). This static set
-// is the fallback; the live list (from the running wrapper's /v1/models) replaces
-// it at runtime so the dropdown only offers models the subscription actually serves.
-const DEFAULT_SUBSCRIPTION_MODELS = [
-  { id: 'claude-sub/claude-opus-4-8',           name: 'Opus 4.8 (subscription)'  },
-  { id: 'claude-sub/claude-sonnet-4-6',         name: 'Sonnet 4.6 (subscription)' },
-  { id: 'claude-sub/claude-haiku-4-5-20251001', name: 'Haiku 4.5 (subscription)' },
-]
+// The subscription group is populated LIVE and ONLY from the running wrapper's
+// /v1/models — never a static guess. This is a hard rule: a model the subscription
+// can't serve (e.g. Opus 4.7/4.8, which are API-only) must never appear as a
+// subscription option, or the user could silently route to the metered API.
+// API-only models remain available under the Anthropic group (CLOUD_MODELS) where
+// the user can pick them deliberately.
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -47,12 +43,15 @@ function normalizeName(name) {
   return name?.replace(/:latest$/, '') ?? name
 }
 
-function getDisplayName(modelId, ollamaModels, subModels = DEFAULT_SUBSCRIPTION_MODELS) {
+function getDisplayName(modelId, ollamaModels, subModels = []) {
   if (!modelId) return ''
   const cloud = CLOUD_MODELS.find((m) => m.id === modelId)
   if (cloud) return cloud.name
   const sub = subModels.find((m) => m.id === modelId)
   if (sub) return sub.name
+  // An already-assigned claude-sub model when the wrapper is down (so no live
+  // list): show the bare model id rather than inventing a name.
+  if (modelId.startsWith('claude-sub/')) return `${modelId.slice('claude-sub/'.length)} (subscription)`
   const ollamaPrefix = 'ollama/'
   const bareId = modelId.startsWith(ollamaPrefix) ? modelId.slice(ollamaPrefix.length) : modelId
   const normalized = normalizeName(bareId)
@@ -66,22 +65,27 @@ function getDisplayName(modelId, ollamaModels, subModels = DEFAULT_SUBSCRIPTION_
 export default function ModelDropdown({ value, onChange, ollamaModels = [] }) {
   const [open,  setOpen]  = useState(false)
   const [query, setQuery] = useState('')
-  const [subModels, setSubModels] = useState(DEFAULT_SUBSCRIPTION_MODELS)
+  const [subModels, setSubModels] = useState([])
+  const [subRunning, setSubRunning] = useState(false)
   const wrapRef  = useRef(null)
   const inputRef = useRef(null)
 
-  // Replace the static subscription list with what the running wrapper serves.
+  // Subscription models come LIVE from the running wrapper only. When it's not
+  // running we show nothing selectable (and a hint) rather than guessing — so an
+  // API-only model can never be picked from the subscription group.
   useEffect(() => {
     const api = window.electronAPI
     if (!api?.getWrapperModels) return
     api
       .getWrapperModels()
       .then((res) => {
-        const live = (res?.models || []).map((m) => ({
-          id: `claude-sub/${m.id}`,
-          name: `${m.name || m.id} (subscription)`,
-        }))
-        if (live.length > 0) setSubModels(live)
+        setSubRunning(!!res?.running)
+        setSubModels(
+          (res?.models || []).map((m) => ({
+            id: `claude-sub/${m.id}`,
+            name: `${m.name || m.id} (subscription)`,
+          })),
+        )
       })
       .catch(() => {})
   }, [])
@@ -208,14 +212,21 @@ export default function ModelDropdown({ value, onChange, ollamaModels = [] }) {
                 </>
               )}
 
-              {filteredSub.length > 0 && (
+              {filteredSub.length > 0 ? (
                 <>
                   <div className="model-dropdown-section-header">Claude · Subscription</div>
                   {filteredSub.map((m) => (
                     <Option key={m.id} id={m.id} label={m.name} isSelected={value === m.id} />
                   ))}
                 </>
-              )}
+              ) : (!subRunning && !q) ? (
+                <>
+                  <div className="model-dropdown-section-header">Claude · Subscription</div>
+                  <div className="model-dropdown-no-results">
+                    Start the wrapper (Models screen) to load subscription models
+                  </div>
+                </>
+              ) : null}
 
               {filteredAnthropic.length > 0 && (
                 <>

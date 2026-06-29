@@ -17,12 +17,15 @@ const NPM_LOADER = '@ai-sdk/openai-compatible'
 const DEFAULT_PORT = 8000
 const DEFAULT_BASE_URL = `http://localhost:${DEFAULT_PORT}/v1`
 
-// Static model list (spec §6). Seed from the wrapper's GET /v1/models at runtime;
-// fall back to this when the wrapper is down so the Models screen still renders.
-// IDs are bare (no provider prefix) — OpenCode references them as
-// `claude-sub/<id>` per the provider/model-id convention (AGENTS.md).
+// Static model list (spec §6) used only as a provider-block default + the Models
+// card's offline display. The authoritative list is the wrapper's live
+// GET /v1/models. CRITICAL: this must contain ONLY models the subscription
+// actually serves — never an API-only model like Opus 4.7/4.8 — so nothing here
+// can ever masquerade as a selectable subscription model. The subscription tops
+// out at Opus 4.6 (the Claude CLI doesn't serve 4.7/4.8). IDs are bare; OpenCode
+// references them as `claude-sub/<id>` (AGENTS.md).
 const WRAPPER_MODELS = [
-  { id: 'claude-opus-4-8', name: 'Opus 4.8 (subscription)' },
+  { id: 'claude-opus-4-6', name: 'Opus 4.6 (subscription)' },
   { id: 'claude-sonnet-4-6', name: 'Sonnet 4.6 (subscription)' },
   { id: 'claude-haiku-4-5-20251001', name: 'Haiku 4.5 (subscription)' },
 ]

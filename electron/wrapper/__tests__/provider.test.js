@@ -18,7 +18,9 @@ describe('wrapper provider block', () => {
     expect(block.npm).toBe('@ai-sdk/openai-compatible')
     expect(block.options.baseURL).toBe('http://localhost:8000/v1')
     expect(block.options.apiKey).toBeUndefined()
-    expect(Object.keys(block.models)).toContain('claude-opus-4-8')
+    // Default models come from the safe static list — subscription-served only.
+    expect(Object.keys(block.models)).toContain('claude-opus-4-6')
+    expect(Object.keys(block.models)).not.toContain('claude-opus-4-8')
   })
 
   it('emits an apiKey {file:} ref only under client-guard', () => {

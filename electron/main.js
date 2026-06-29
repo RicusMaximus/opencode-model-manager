@@ -1034,11 +1034,14 @@ ipcMain.handle('wrapper:status', async () => {
   return wrapperSupervisor.getStatus()
 })
 
-// The model list the Models screen + agent dropdown should offer: live list when
-// the wrapper is running, else the static fallback.
+// The model list the agent dropdown offers for the SUBSCRIPTION group. This is
+// LIVE-ONLY: exactly what the running wrapper serves, or empty when it's down.
+// We never fall back to a static guess here, so an API-only model (e.g. Opus 4.8)
+// can't appear as a selectable subscription option. `running` lets the UI show a
+// "start the wrapper" hint instead of silently offering nothing.
 ipcMain.handle('wrapper:models', async () => {
   const status = wrapperSupervisor.getStatus()
-  return { models: status.models || WRAPPER_DESCRIPTOR.models }
+  return { models: status.models || [], running: status.state === 'running' }
 })
 
 // Start (idempotent). Provider block + secrets → GLOBAL config; CLAUDE_CWD →
