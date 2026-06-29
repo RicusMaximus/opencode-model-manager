@@ -890,9 +890,24 @@ function isGlobalConfigDir(dir) {
   return path.resolve(dir) === path.resolve(DEFAULT_CONFIG_DIR)
 }
 
+// The user's GLOBAL OpenCode agents folder (resolved the same way OpenCode finds
+// its global config — honoring OPENCODE_CONFIG_DIR). The scaffolder copies the
+// real .agent.md files from here into the project, so nothing about any one user's
+// agents repo/symlink is baked into the app.
+async function getGlobalAgentsDir() {
+  return path.join(await getGlobalConfigDir(), 'agents')
+}
+
 // Catalog for the form — strip nothing; descriptors are already serializable.
 ipcMain.handle('scaffold:catalog', async () => {
   return { mcp: MCP_CATALOG, skills: SKILLS_CATALOG }
+})
+
+// List the agents available to copy (for the form's "Include agents (N)" toggle).
+ipcMain.handle('scaffold:global-agents', async () => {
+  const dir = await getGlobalAgentsDir()
+  const agents = await scaffoldEngine.listAgentFiles(dir)
+  return { dir, agents: agents.map((a) => ({ id: a.id, name: a.name })) }
 })
 
 // Header/guard info: the project root, display name, and whether scaffolding is
@@ -917,7 +932,7 @@ ipcMain.handle('scaffold:preview', async (_event, selections) => {
   try {
     const root = await getConfigDir()
     if (isGlobalConfigDir(root)) return { error: 'global-config' }
-    return await scaffoldEngine.preview(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
+    return await scaffoldEngine.preview(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG }, { globalAgentsDir: await getGlobalAgentsDir() })
   } catch (err) {
     return { error: err.message }
   }
@@ -929,7 +944,7 @@ ipcMain.handle('scaffold:sync', async (_event, selections) => {
     const root = await getConfigDir()
     if (isGlobalConfigDir(root)) return { error: 'global-config' }
     process.env.SCAFFOLD_TEMPLATE_DIR = getTemplateDir()
-    const result = await scaffoldEngine.sync(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
+    const result = await scaffoldEngine.sync(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG }, { globalAgentsDir: await getGlobalAgentsDir() })
     return { success: true, ...result }
   } catch (err) {
     return { success: false, error: err.message }

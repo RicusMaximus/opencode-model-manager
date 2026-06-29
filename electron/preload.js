@@ -33,6 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Project scaffolding
   getScaffoldCatalog: () => ipcRenderer.invoke('scaffold:catalog'),
   getScaffoldTarget: () => ipcRenderer.invoke('scaffold:target-info'),
+  getScaffoldGlobalAgents: () => ipcRenderer.invoke('scaffold:global-agents'),
   previewScaffold: (selections) => ipcRenderer.invoke('scaffold:preview', selections),
   runScaffold: (selections) => ipcRenderer.invoke('scaffold:sync', selections),
   doctorScaffold: (selections) => ipcRenderer.invoke('scaffold:doctor', selections),

@@ -189,6 +189,69 @@ describe('preview', () => {
   })
 })
 
+// ── agents — copy from the user's global agents folder ──────────────────────
+describe('agents', () => {
+  async function makeGlobalAgents() {
+    const dir = path.join(tmpDir, 'global-agents')
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(path.join(dir, 'builder.agent.md'), '# Builder', 'utf8')
+    await fs.writeFile(path.join(dir, 'architect.agent.md'), '# Architect', 'utf8')
+    await fs.writeFile(path.join(dir, 'notes.txt'), 'not an agent', 'utf8')
+    return dir
+  }
+
+  it('copies all .agent.md (real content) into <project>/agents, ignoring non-agent files', async () => {
+    const globalAgentsDir = await makeGlobalAgents()
+    const project = path.join(tmpDir, 'proj')
+    await fs.mkdir(project, { recursive: true })
+
+    const res = await engine.sync(project, { includeAgents: true }, catalog, { globalAgentsDir, isGitRepo: () => false })
+    expect(await fs.readFile(path.join(project, 'agents', 'builder.agent.md'), 'utf8')).toBe('# Builder')
+    expect(await exists(path.join(project, 'agents', 'architect.agent.md'))).toBe(true)
+    expect(await exists(path.join(project, 'agents', 'notes.txt'))).toBe(false)
+    expect(res.created).toContain('agents/builder.agent.md')
+  })
+
+  it('is create-if-missing — never overwrites a project-edited agent on re-run', async () => {
+    const globalAgentsDir = await makeGlobalAgents()
+    const project = path.join(tmpDir, 'proj')
+    await fs.mkdir(project, { recursive: true })
+    await engine.sync(project, { includeAgents: true }, catalog, { globalAgentsDir, isGitRepo: () => false })
+    await fs.writeFile(path.join(project, 'agents', 'builder.agent.md'), 'EDITED LOCALLY', 'utf8')
+
+    const res2 = await engine.sync(project, { includeAgents: true }, catalog, { globalAgentsDir, isGitRepo: () => false })
+    expect(await fs.readFile(path.join(project, 'agents', 'builder.agent.md'), 'utf8')).toBe('EDITED LOCALLY')
+    expect(res2.skipped).toContain('agents/builder.agent.md')
+  })
+
+  it('copies nothing when includeAgents is false', async () => {
+    const globalAgentsDir = await makeGlobalAgents()
+    const project = path.join(tmpDir, 'proj')
+    await fs.mkdir(project, { recursive: true })
+    await engine.sync(project, { includeAgents: false }, catalog, { globalAgentsDir, isGitRepo: () => false })
+    expect(await exists(path.join(project, 'agents'))).toBe(false)
+  })
+
+  it('warns when on but the global agents folder is empty/missing', async () => {
+    const project = path.join(tmpDir, 'proj')
+    await fs.mkdir(project, { recursive: true })
+    const res = await engine.sync(project, { includeAgents: true }, catalog, {
+      globalAgentsDir: path.join(tmpDir, 'does-not-exist'),
+      isGitRepo: () => false,
+    })
+    expect(res.warnings.some((w) => /agent/i.test(w))).toBe(true)
+  })
+
+  it('preview lists the agent files that would be copied', async () => {
+    const globalAgentsDir = await makeGlobalAgents()
+    const project = path.join(tmpDir, 'proj')
+    await fs.mkdir(project, { recursive: true })
+    const pv = await engine.preview(project, { includeAgents: true }, catalog, { globalAgentsDir })
+    expect(pv.willCreate).toContain('agents/builder.agent.md')
+    expect(pv.willCreate).toContain('agents/architect.agent.md')
+  })
+})
+
 // ── shared secret dedupe (spec §7.4.5) ──────────────────────────────────────
 describe('dedupe by fileName', () => {
   it('one file per fileName even across inputs', () => {

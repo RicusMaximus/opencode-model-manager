@@ -104,12 +104,32 @@ function computePlan(selections, catalog) {
     configInline,
     external,
     skills,
+    // Copy the user's global agents into the project (resolved at sync/preview
+    // time from deps.globalAgentsDir — the listing is I/O so it's not done here).
+    includeAgents: !!selections.includeAgents,
     projectMemory: selections.projectMemory
       ? { folder: (selections.memoryFolder || 'project-memory').trim() || 'project-memory' }
       : null,
     specsFolder: !!selections.specsFolder,
     needsSecretsFolder: secretFiles.length > 0,
     missingConfigValues,
+  }
+}
+
+// List the .agent.md files in a global agents folder. fs.readdir/readFile follow
+// symlinks transparently, so a folder that is itself a symlink (or contains
+// symlinked files) resolves to the real files — letting us copy real content
+// into the project rather than recreating the user's symlink/repo dependency.
+async function listAgentFiles(dir) {
+  if (!dir) return []
+  try {
+    const entries = await fs.readdir(dir)
+    return entries
+      .filter((f) => f.endsWith('.agent.md'))
+      .sort()
+      .map((f) => ({ name: f, id: f.replace(/\.agent\.md$/, ''), src: path.join(dir, f) }))
+  } catch {
+    return [] // folder doesn't exist (user has no global agents) → nothing to copy
   }
 }
 
@@ -345,6 +365,26 @@ async function sync(projectRoot, selections, catalog, deps = {}) {
     ;(r === 'created' ? created : skipped).push(`skill/${skill.id}/SKILL.md`)
   }
 
+  // — agents: copy all .agent.md from the user's global agents folder —
+  // Real file contents are copied (create-if-missing) so the project is
+  // self-contained; the source symlink/repo is never referenced (spec portability).
+  if (plan.includeAgents) {
+    const agentFiles = await listAgentFiles(deps.globalAgentsDir)
+    if (agentFiles.length === 0) {
+      warnings.push('Include agents was on, but no .agent.md files were found in the global agents folder.')
+    }
+    for (const a of agentFiles) {
+      let content
+      try {
+        content = await fs.readFile(a.src, 'utf8')
+      } catch {
+        continue // unreadable source file — skip
+      }
+      const r = await ensureFileIfMissing(rel('agents', a.name), content)
+      ;(r === 'created' ? created : skipped).push(`agents/${a.name}`)
+    }
+  }
+
   // — Obsidian project-memory vault —
   if (plan.projectMemory) {
     const dest = rel(plan.projectMemory.folder)
@@ -408,6 +448,11 @@ async function preview(projectRoot, selections, catalog, deps = {}) {
   await classify('opencode.jsonc')
   for (const skill of plan.skills) {
     await classify(path.join('skill', skill.id, 'SKILL.md'), `skill/${skill.id}/SKILL.md`)
+  }
+  if (plan.includeAgents) {
+    for (const a of await listAgentFiles(deps.globalAgentsDir)) {
+      await classify(path.join('agents', a.name), `agents/${a.name}`)
+    }
   }
   if (plan.projectMemory) {
     await classify(plan.projectMemory.folder, `${plan.projectMemory.folder}/ (vault)`)
@@ -477,6 +522,7 @@ module.exports = {
   writeFileAlways,
   ensureGitignoreBlock,
   renderSecretsReadme,
+  listAgentFiles,
   sync,
   preview,
 }

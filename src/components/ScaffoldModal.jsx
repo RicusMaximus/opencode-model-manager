@@ -8,12 +8,14 @@ const api = window.electronAPI
 export default function ScaffoldModal({ onClose, onScaffolded }) {
   const [catalog, setCatalog] = useState(null)
   const [target, setTarget] = useState(null)
+  const [globalAgents, setGlobalAgents] = useState(null) // { dir, agents: [{id,name}] }
 
   // — selections —
   const [servers, setServers] = useState({})          // { [id]: true }
   const [authProfile, setAuthProfile] = useState({})  // { [id]: profileId }
   const [configValues, setConfigValues] = useState({})// { [envVar]: value }
   const [skills, setSkills] = useState({})            // { [id]: true }
+  const [includeAgents, setIncludeAgents] = useState(true) // copy global agents (default on)
   const [projectMemory, setProjectMemory] = useState(false)
   const [memoryFolder, setMemoryFolder] = useState('project-memory')
   const [specsFolder, setSpecsFolder] = useState(false)
@@ -27,7 +29,10 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
     if (!api) return
     api.getScaffoldCatalog().then(setCatalog).catch(() => setCatalog({ mcp: {}, skills: {} }))
     api.getScaffoldTarget().then(setTarget).catch(() => setTarget(null))
+    api.getScaffoldGlobalAgents?.().then(setGlobalAgents).catch(() => setGlobalAgents({ dir: '', agents: [] }))
   }, [])
+
+  const agentCount = globalAgents?.agents?.length ?? 0
 
   // Build the selections object the engine expects.
   const selections = useMemo(() => ({
@@ -35,10 +40,11 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
     authProfile,
     configValues,
     skills: Object.keys(skills).filter((id) => skills[id]),
+    includeAgents: includeAgents && agentCount > 0,
     projectMemory,
     memoryFolder,
     specsFolder,
-  }), [servers, authProfile, configValues, skills, projectMemory, memoryFolder, specsFolder])
+  }), [servers, authProfile, configValues, skills, includeAgents, agentCount, projectMemory, memoryFolder, specsFolder])
 
   // Live preview — debounced dry run whenever the selection changes (spec §6).
   useEffect(() => {
@@ -195,6 +201,28 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
                         <span>{s.name} — <em>{s.description}</em></span>
                       </label>
                     ))}
+                  </section>
+
+                  {/* Agents — copy all from the user's global agents folder */}
+                  <section className="scaffold-section">
+                    <h3>Agents</h3>
+                    <label className={`scaffold-check${agentCount === 0 ? ' scaffold-check--disabled' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={includeAgents && agentCount > 0}
+                        disabled={agentCount === 0}
+                        onChange={() => setIncludeAgents((v) => !v)}
+                      />
+                      <span>
+                        Copy agents from your global config
+                        {globalAgents && (
+                          <em> — {agentCount} found{agentCount > 0 ? `: ${globalAgents.agents.map((a) => a.id).join(', ')}` : ''}</em>
+                        )}
+                      </span>
+                    </label>
+                    {globalAgents && agentCount === 0 && (
+                      <p className="scaffold-muted">No <code>.agent.md</code> files in your global agents folder.</p>
+                    )}
                   </section>
 
                   {/* Project memory */}
