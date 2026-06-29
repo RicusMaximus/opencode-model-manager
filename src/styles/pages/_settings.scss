@@ -1,0 +1,60 @@
+// ── Pages: Settings ─────────────────────────────────────────────────────────
+
+.settings-panel {
+  padding: 24px 28px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.settings-list {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-card);
+}
+
+.settings-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.settings-row-label {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-row-desc {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+// The shared .as-toggle handles the switch visuals; just give it a cursor +
+// focus affordance here since it's interactive on this page.
+.settings-row .as-toggle {
+  cursor: pointer;
+  margin-top: 2px;
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(163, 201, 255, 0.35);
+  }
+}

@@ -189,66 +189,108 @@ describe('preview', () => {
   })
 })
 
-// ── agents — copy from the user's global agents folder ──────────────────────
-describe('agents', () => {
-  async function makeGlobalAgents() {
-    const dir = path.join(tmpDir, 'global-agents')
-    await fs.mkdir(dir, { recursive: true })
-    await fs.writeFile(path.join(dir, 'builder.agent.md'), '# Builder', 'utf8')
-    await fs.writeFile(path.join(dir, 'architect.agent.md'), '# Architect', 'utf8')
-    await fs.writeFile(path.join(dir, 'notes.txt'), 'not an agent', 'utf8')
-    return dir
-  }
-
-  it('copies all .agent.md (real content) into <project>/agents, ignoring non-agent files', async () => {
-    const globalAgentsDir = await makeGlobalAgents()
-    const project = path.join(tmpDir, 'proj')
-    await fs.mkdir(project, { recursive: true })
-
-    const res = await engine.sync(project, { includeAgents: true }, catalog, { globalAgentsDir, isGitRepo: () => false })
-    expect(await fs.readFile(path.join(project, 'agents', 'builder.agent.md'), 'utf8')).toBe('# Builder')
-    expect(await exists(path.join(project, 'agents', 'architect.agent.md'))).toBe(true)
-    expect(await exists(path.join(project, 'agents', 'notes.txt'))).toBe(false)
-    expect(res.created).toContain('agents/builder.agent.md')
+// ── agents — tools-only per-project config entries (no markdown copying) ─────
+describe('agent config entries', () => {
+  // obsidian (config+secret) + figma local-desktop give us two project servers.
+  const twoServerSelections = (scope) => ({
+    mcpServers: ['obsidian', 'figma'],
+    authProfile: { figma: 'local-desktop' },
+    agentConfigs: { enabled: true, scope },
   })
 
-  it('is create-if-missing — never overwrites a project-edited agent on re-run', async () => {
-    const globalAgentsDir = await makeGlobalAgents()
-    const project = path.join(tmpDir, 'proj')
-    await fs.mkdir(project, { recursive: true })
-    await engine.sync(project, { includeAgents: true }, catalog, { globalAgentsDir, isGitRepo: () => false })
-    await fs.writeFile(path.join(project, 'agents', 'builder.agent.md'), 'EDITED LOCALLY', 'utf8')
-
-    const res2 = await engine.sync(project, { includeAgents: true }, catalog, { globalAgentsDir, isGitRepo: () => false })
-    expect(await fs.readFile(path.join(project, 'agents', 'builder.agent.md'), 'utf8')).toBe('EDITED LOCALLY')
-    expect(res2.skipped).toContain('agents/builder.agent.md')
+  it('writes tools-only entries scoped per agent, never redefining the agent', async () => {
+    await engine.sync(
+      tmpDir,
+      twoServerSelections({
+        'design-system-integrator': { figma: true, obsidian: false },
+        builder: { figma: false, obsidian: true },
+      }),
+      catalog,
+      { isGitRepo: () => false },
+    )
+    const cfg = JSON.parse(await fs.readFile(path.join(tmpDir, 'opencode.jsonc'), 'utf8'))
+    expect(cfg.agent['design-system-integrator']).toEqual({ tools: { 'figma*': true, 'obsidian*': false } })
+    expect(cfg.agent.builder).toEqual({ tools: { 'figma*': false, 'obsidian*': true } })
+    // tools-only — no model / prompt / description leaked in
+    expect(cfg.agent.builder.model).toBeUndefined()
+    expect(cfg.agent.builder.prompt).toBeUndefined()
   })
 
-  it('copies nothing when includeAgents is false', async () => {
-    const globalAgentsDir = await makeGlobalAgents()
-    const project = path.join(tmpDir, 'proj')
-    await fs.mkdir(project, { recursive: true })
-    await engine.sync(project, { includeAgents: false }, catalog, { globalAgentsDir, isGitRepo: () => false })
-    expect(await exists(path.join(project, 'agents'))).toBe(false)
-  })
-
-  it('warns when on but the global agents folder is empty/missing', async () => {
-    const project = path.join(tmpDir, 'proj')
-    await fs.mkdir(project, { recursive: true })
-    const res = await engine.sync(project, { includeAgents: true }, catalog, {
-      globalAgentsDir: path.join(tmpDir, 'does-not-exist'),
+  it('copies NO markdown — there is no agents/ folder', async () => {
+    await engine.sync(tmpDir, twoServerSelections({ builder: { figma: true, obsidian: true } }), catalog, {
       isGitRepo: () => false,
     })
-    expect(res.warnings.some((w) => /agent/i.test(w))).toBe(true)
+    expect(await exists(path.join(tmpDir, 'agents'))).toBe(false)
   })
 
-  it('preview lists the agent files that would be copied', async () => {
-    const globalAgentsDir = await makeGlobalAgents()
-    const project = path.join(tmpDir, 'proj')
-    await fs.mkdir(project, { recursive: true })
-    const pv = await engine.preview(project, { includeAgents: true }, catalog, { globalAgentsDir })
-    expect(pv.willCreate).toContain('agents/builder.agent.md')
-    expect(pv.willCreate).toContain('agents/architect.agent.md')
+  it('only includes the project\'s selected servers in the tools map', async () => {
+    // scope references mendix, which is NOT a selected server → must be dropped
+    await engine.sync(tmpDir, twoServerSelections({ builder: { figma: true, mendix: true } }), catalog, {
+      isGitRepo: () => false,
+    })
+    const cfg = JSON.parse(await fs.readFile(path.join(tmpDir, 'opencode.jsonc'), 'utf8'))
+    expect(cfg.agent.builder.tools).toEqual({ 'figma*': true })
+    expect('mendix*' in cfg.agent.builder.tools).toBe(false)
+  })
+
+  it('deep-merges tools into an existing agent entry without clobbering other fields/tools', async () => {
+    const cfgPath = path.join(tmpDir, 'opencode.jsonc')
+    await fs.writeFile(
+      cfgPath,
+      JSON.stringify({ $schema: 'x', agent: { builder: { model: 'claude-sub/claude-opus-4-6', tools: { read: true } } } }, null, 2),
+      'utf8',
+    )
+    await engine.sync(tmpDir, twoServerSelections({ builder: { figma: true, obsidian: false } }), catalog, {
+      isGitRepo: () => false,
+    })
+    const cfg = JSON.parse(await fs.readFile(cfgPath, 'utf8'))
+    expect(cfg.agent.builder.model).toBe('claude-sub/claude-opus-4-6') // preserved
+    expect(cfg.agent.builder.tools.read).toBe(true) // preserved
+    expect(cfg.agent.builder.tools['figma*']).toBe(true) // added
+    expect(cfg.agent.builder.tools['obsidian*']).toBe(false)
+  })
+
+  it('carries the semantic display name from agentConfigs.names into the entry', async () => {
+    await engine.sync(
+      tmpDir,
+      {
+        mcpServers: ['figma'],
+        authProfile: { figma: 'local-desktop' },
+        agentConfigs: {
+          enabled: true,
+          scope: { 'design-system-integrator': { figma: true } },
+          names: { 'design-system-integrator': 'Design System Integrator (Figma)' },
+        },
+      },
+      catalog,
+      { isGitRepo: () => false },
+    )
+    const cfg = JSON.parse(await fs.readFile(path.join(tmpDir, 'opencode.jsonc'), 'utf8'))
+    expect(cfg.agent['design-system-integrator'].name).toBe('Design System Integrator (Figma)')
+    expect(cfg.agent['design-system-integrator'].tools['figma*']).toBe(true)
+    // still no model/prompt — name is the only added definition field
+    expect(cfg.agent['design-system-integrator'].model).toBeUndefined()
+  })
+
+  it('writes no agent entries when disabled', async () => {
+    const res = await engine.sync(
+      tmpDir,
+      { mcpServers: ['figma'], authProfile: { figma: 'local-desktop' }, agentConfigs: { enabled: false, scope: { builder: { figma: true } } } },
+      catalog,
+      { isGitRepo: () => false },
+    )
+    const cfg = JSON.parse(await fs.readFile(path.join(tmpDir, 'opencode.jsonc'), 'utf8'))
+    expect(cfg.agent).toBeUndefined()
+    expect(res.agentsConfigured).toEqual([])
+  })
+
+  it('preview reports which agents will be configured', async () => {
+    const pv = await engine.preview(
+      tmpDir,
+      twoServerSelections({ builder: { figma: true }, validator: { figma: false } }),
+      catalog,
+    )
+    expect(pv.willConfigureAgents).toEqual(expect.arrayContaining(['builder', 'validator']))
   })
 })
 

@@ -14,8 +14,6 @@
     box-shadow 0.22s ease,
     transform 0.22s ease,
     border-color 0.22s ease;
-  aspect-ratio: 1.618 / 1;
-  overflow: hidden;
 
   &:hover {
     box-shadow: var(--shadow-card-hover);
@@ -34,6 +32,12 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+}
+
+.agent-card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .agent-color-sq {
@@ -90,33 +94,7 @@
   justify-content: flex-end;
 }
 
-.agent-badge {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 2px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-
-  &.primary {
-    background: color-mix(in srgb, var(--blue-bright) 18%, transparent);
-    border: 1px solid color-mix(in srgb, var(--blue-bright) 50%, transparent);
-    color: var(--blue-bright);
-  }
-
-  &.local {
-    background: color-mix(in srgb, var(--accent-green) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-green) 38%, transparent);
-    color: var(--accent-green);
-  }
-
-  &.cloud {
-    background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
-    border: 1px solid color-mix(in srgb, var(--accent-blue) 38%, transparent);
-    color: var(--accent-blue);
-  }
-}
+// Badge colours/sizes now live in the shared Badge component (_badge.scss).
 
 .agent-identity {
   display: flex;
@@ -149,41 +127,31 @@
   margin-bottom: 2px;
 }
 
-// Tool chips
-.agent-tools {
+// ── Summary section: model · skills · tools · MCP servers ───────────────────
+.agent-summary {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
 }
 
-.agent-tool-chips {
+.agent-summary-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 5px;
 }
 
-.agent-tool-chip {
+.agent-model-text {
   font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 400;
-  padding: 2px 8px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--chip-color, #59a6ff) 12%, transparent);
-  border: 1px solid
-    color-mix(in srgb, var(--chip-color, #59a6ff) 35%, transparent);
-  color: var(--chip-color, #59a6ff);
-  white-space: nowrap;
-  box-shadow:
-    0 0 8px color-mix(in srgb, var(--chip-color, #59a6ff) 20%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-all;
 }
 
-// Model row
-.agent-model-row {
+// Wraps the shared <Badge> chips in a summary row (skills / tools / MCP).
+.agent-badge-list {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: auto; // pushes to bottom of card
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 // The per-card settings cog now uses the shared `.btn btn--icon btn--icon-sm`

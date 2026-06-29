@@ -9,6 +9,7 @@ import ReviewQueuePanel from "./components/ReviewQueuePanel.jsx";
 import RightSidebar from "./components/RightSidebar.jsx";
 import StatusBar from "./components/StatusBar.jsx";
 import ScaffoldModal from "./components/ScaffoldModal.jsx";
+import SettingsPanel from "./components/SettingsPanel.jsx";
 import { applyAgentDefaults } from "./data/agentDefaults.js";
 
 const api = window.electronAPI;
@@ -85,16 +86,20 @@ export default function App() {
   const [isDirty, setIsDirty] = useState(false);
   const [scaffoldOpen, setScaffoldOpen] = useState(false);
   const [scaffoldTarget, setScaffoldTarget] = useState(null);
+  const [appSettings, setAppSettings] = useState({ runClaudeSubOnStartup: false });
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [mcpStatus, setMcpStatus] = useState({});
+  const [mcpReady, setMcpReady] = useState(false);
 
   // Snapshot for dirty-check — initialised after config load
   const originalRef = useRef(null);
   const configLoadedRef = useRef(false);
 
-  // ── Initial load ─────────────────────────────────────────────────
-  useEffect(() => {
+  // Read the active config and (re)populate model + agents. Reused on mount and
+  // after a scaffold so the overview reflects what was just written to disk
+  // (e.g. agent display names the scaffolder added).
+  const loadConfig = useCallback(() => {
     if (!api) return;
-
-    // Load config path, then read config
     api
       .getConfigPath()
       .then((p) => {
@@ -145,6 +150,13 @@ export default function App() {
         setIsDirty(JSON.stringify(migrated) !== baselineJson);
       })
       .catch(console.error);
+  }, []);
+
+  // ── Initial load ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!api) return;
+
+    loadConfig();
 
     // Load skills available in the config directory
     api
@@ -175,7 +187,7 @@ export default function App() {
       clearInterval(ollamaTimer);
       clearInterval(sysTimer);
     };
-  }, []);
+  }, [loadConfig]);
 
   // ── Scaffold target info (drives the title-bar button + modal header) ──
   // Re-resolved whenever the active workspace changes (Browse), so the button
@@ -187,6 +199,39 @@ export default function App() {
       .then(setScaffoldTarget)
       .catch(() => setScaffoldTarget(null));
   }, [configPath]);
+
+  // ── App settings (separate from OpenCode config) ──────────────────
+  useEffect(() => {
+    if (!api?.getSettings) return;
+    api.getSettings().then((s) => s && setAppSettings(s)).catch(() => {});
+  }, []);
+
+  // ── MCP server reachability (agent-card dots) — poll every 15s ─────
+  useEffect(() => {
+    if (!api?.getMcpStatus) return undefined;
+    setMcpReady(false); // switching workspace → show "connecting" until first probe returns
+    const refresh = () =>
+      api
+        .getMcpStatus()
+        .then((d) => { setMcpStatus(d?.servers || {}); setMcpReady(true); })
+        .catch(() => {});
+    refresh();
+    const t = setInterval(refresh, 15000);
+    return () => clearInterval(t);
+  }, [configPath]);
+
+  // Persist a setting; main applies its effect immediately (e.g. start/stop the
+  // wrapper). Optimistically reflect the value, reconcile with the returned state.
+  const handleSettingChange = useCallback((key, value) => {
+    if (!api?.setSettings) return;
+    setSettingsBusy(true);
+    setAppSettings((prev) => ({ ...prev, [key]: value }));
+    api
+      .setSettings({ [key]: value })
+      .then((next) => { if (next) setAppSettings(next); })
+      .catch(() => {})
+      .finally(() => setSettingsBusy(false));
+  }, []);
 
   // ── Pending review count (sidebar badge) ──────────────────────────
   useEffect(() => {
@@ -371,7 +416,9 @@ export default function App() {
         <ScaffoldModal
           onClose={() => setScaffoldOpen(false)}
           onScaffolded={() => {
-            // Refresh skills so a newly-scaffolded skill surfaces in the picker.
+            // Re-read the freshly-written config so the overview shows the
+            // scaffolded agents (with their display names), then refresh skills.
+            loadConfig();
             if (api) {
               api.listSkills().then((d) => setSkills(d?.skills || [])).catch(() => {});
             }
@@ -390,13 +437,14 @@ export default function App() {
           {activeView === "agents" && (
             <AgentPanel
               agents={agents}
-              ollamaModels={ollamaStatus.models}
-              onModelChange={handleAgentModelChange}
               onOpenSettings={(agentId) => {
                 setSettingsAgentId(agentId);
                 setActiveView("agent-settings");
               }}
               onCreateAgent={() => setActiveView("agent-new")}
+              skills={skills}
+              mcpStatus={mcpStatus}
+              mcpReady={mcpReady}
             />
           )}
           {activeView === "agent-settings" && (
@@ -428,6 +476,13 @@ export default function App() {
             </div>
           )}
           {activeView === "review-queue" && <ReviewQueuePanel />}
+          {activeView === "settings" && (
+            <SettingsPanel
+              settings={appSettings}
+              onChange={handleSettingChange}
+              busy={settingsBusy}
+            />
+          )}
           {activeView === "system" && (
             <div className="system-full-view">
               <RightSidebar

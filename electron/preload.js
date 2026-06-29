@@ -30,6 +30,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Skills
   listSkills: () => ipcRenderer.invoke('skills:list'),
 
+  // MCP server reachability (for agent-card dots)
+  getMcpStatus: () => ipcRenderer.invoke('mcp:status'),
+
   // Project scaffolding
   getScaffoldCatalog: () => ipcRenderer.invoke('scaffold:catalog'),
   getScaffoldTarget: () => ipcRenderer.invoke('scaffold:target-info'),
@@ -54,6 +57,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('wrapper:install-progress', l)
     return () => ipcRenderer.removeListener('wrapper:install-progress', l)
   },
+
+  // App settings (separate from OpenCode config)
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  setSettings: (partial) => ipcRenderer.invoke('settings:set', partial),
 
   // System info
   getSystemInfo: () => ipcRenderer.invoke('system:get-info'),

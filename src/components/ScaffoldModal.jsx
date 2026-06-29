@@ -15,7 +15,8 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
   const [authProfile, setAuthProfile] = useState({})  // { [id]: profileId }
   const [configValues, setConfigValues] = useState({})// { [envVar]: value }
   const [skills, setSkills] = useState({})            // { [id]: true }
-  const [includeAgents, setIncludeAgents] = useState(true) // copy global agents (default on)
+  const [genAgents, setGenAgents] = useState(true)    // write per-project agent configs (default on)
+  const [agentScope, setAgentScope] = useState({})    // { [agentId]: { [serverId]: bool } }
   const [projectMemory, setProjectMemory] = useState(false)
   const [memoryFolder, setMemoryFolder] = useState('project-memory')
   const [specsFolder, setSpecsFolder] = useState(false)
@@ -32,19 +33,42 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
     api.getScaffoldGlobalAgents?.().then(setGlobalAgents).catch(() => setGlobalAgents({ dir: '', agents: [] }))
   }, [])
 
-  const agentCount = globalAgents?.agents?.length ?? 0
+  const agentList = globalAgents?.agents ?? []
+  const agentCount = agentList.length
+  const selectedServers = useMemo(() => Object.keys(servers).filter((id) => servers[id]), [servers])
+
+  // Per-agent capability for a (project) server, defaulting to ON (OpenCode's
+  // own default) so the user un-checks to restrict rather than opt every cell in.
+  const scopeOf = useCallback(
+    (agentId, serverId) => agentScope[agentId]?.[serverId] ?? true,
+    [agentScope],
+  )
+  const setScope = useCallback((agentId, serverId, val) => {
+    setAgentScope((prev) => ({ ...prev, [agentId]: { ...(prev[agentId] || {}), [serverId]: val } }))
+  }, [])
 
   // Build the selections object the engine expects.
-  const selections = useMemo(() => ({
-    mcpServers: Object.keys(servers).filter((id) => servers[id]),
-    authProfile,
-    configValues,
-    skills: Object.keys(skills).filter((id) => skills[id]),
-    includeAgents: includeAgents && agentCount > 0,
-    projectMemory,
-    memoryFolder,
-    specsFolder,
-  }), [servers, authProfile, configValues, skills, includeAgents, agentCount, projectMemory, memoryFolder, specsFolder])
+  const selections = useMemo(() => {
+    const scope = {}
+    const names = {}
+    if (genAgents) {
+      for (const a of agentList) {
+        scope[a.id] = {}
+        for (const sid of selectedServers) scope[a.id][sid] = agentScope[a.id]?.[sid] ?? true
+        if (a.displayName && a.displayName !== a.id) names[a.id] = a.displayName
+      }
+    }
+    return {
+      mcpServers: selectedServers,
+      authProfile,
+      configValues,
+      skills: Object.keys(skills).filter((id) => skills[id]),
+      agentConfigs: { enabled: genAgents && agentCount > 0, scope, names },
+      projectMemory,
+      memoryFolder,
+      specsFolder,
+    }
+  }, [selectedServers, authProfile, configValues, skills, genAgents, agentScope, agentList, agentCount, projectMemory, memoryFolder, specsFolder])
 
   // Live preview — debounced dry run whenever the selection changes (spec §6).
   useEffect(() => {
@@ -203,25 +227,51 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
                     ))}
                   </section>
 
-                  {/* Agents — copy all from the user's global agents folder */}
+                  {/* Agent configs — tools-only per-project entries for global agents */}
                   <section className="scaffold-section">
-                    <h3>Agents</h3>
+                    <h3>Agent configs</h3>
                     <label className={`scaffold-check${agentCount === 0 ? ' scaffold-check--disabled' : ''}`}>
                       <input
                         type="checkbox"
-                        checked={includeAgents && agentCount > 0}
+                        checked={genAgents && agentCount > 0}
                         disabled={agentCount === 0}
-                        onChange={() => setIncludeAgents((v) => !v)}
+                        onChange={() => setGenAgents((v) => !v)}
                       />
                       <span>
-                        Copy agents from your global config
-                        {globalAgents && (
-                          <em> — {agentCount} found{agentCount > 0 ? `: ${globalAgents.agents.map((a) => a.id).join(', ')}` : ''}</em>
-                        )}
+                        Write per-project agent configs into <code>opencode.jsonc</code>
+                        {globalAgents && <em> — {agentCount} global agent{agentCount === 1 ? '' : 's'}</em>}
                       </span>
                     </label>
                     {globalAgents && agentCount === 0 && (
                       <p className="scaffold-muted">No <code>.agent.md</code> files in your global agents folder.</p>
+                    )}
+                    {genAgents && agentCount > 0 && (
+                      selectedServers.length === 0 ? (
+                        <p className="scaffold-muted">Select MCP servers above to scope each agent’s per-project tools. (Model &amp; prompt stay in the global config.)</p>
+                      ) : (
+                        <div className="scaffold-agent-grid" style={{ '--cols': selectedServers.length }}>
+                          <div className="scaffold-agent-grid__head">
+                            <span className="scaffold-agent-grid__corner">Agent · can use →</span>
+                            {selectedServers.map((sid) => (
+                              <span key={sid} className="scaffold-agent-grid__col">{catalog.mcp[sid]?.label || sid}</span>
+                            ))}
+                          </div>
+                          {agentList.map((a) => (
+                            <div key={a.id} className="scaffold-agent-grid__row">
+                              <span className="scaffold-agent-grid__agent" title={a.id}>{a.displayName || a.id}</span>
+                              {selectedServers.map((sid) => (
+                                <label key={sid} className="scaffold-agent-grid__cell">
+                                  <input
+                                    type="checkbox"
+                                    checked={scopeOf(a.id, sid)}
+                                    onChange={(e) => setScope(a.id, sid, e.target.checked)}
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      )
                     )}
                   </section>
 
@@ -281,6 +331,12 @@ export default function ScaffoldModal({ onClose, onScaffolded }) {
                         <strong>Skip (exists):</strong> {preview.willSkip.join(', ')}
                       </div>
                     )}
+                    {preview.willConfigureAgents?.length > 0 && (
+                      <div>
+                        <strong>Agent configs ({preview.willConfigureAgents.length}):</strong>{' '}
+                        {preview.willConfigureAgents.join(', ')}
+                      </div>
+                    )}
                   </>
                 )}
                 {error && <div className="scaffold-warn">Error: {error}</div>}
@@ -309,6 +365,14 @@ function SummaryView({ summary, onClose }) {
             {(summary.created || []).map((f) => <li key={f}>+ {f}</li>)}
           </ul>
         </section>
+        {summary.agentsConfigured?.length > 0 && (
+          <section className="scaffold-section">
+            <h3>Agent configs in opencode.jsonc ({summary.agentsConfigured.length})</h3>
+            <ul className="scaffold-list">
+              {summary.agentsConfigured.map((id) => <li key={id}>· {id}</li>)}
+            </ul>
+          </section>
+        )}
         {summary.skipped?.length > 0 && (
           <section className="scaffold-section">
             <h3>Skipped — already existed ({summary.skipped.length})</h3>

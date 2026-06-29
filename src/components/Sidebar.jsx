@@ -41,6 +41,20 @@ function ReviewQueueIcon({ size = 16 }) {
   )
 }
 
+function SettingsIcon({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.3" />
+      <path
+        d="M8 1.5v1.8M8 12.7v1.8M14.5 8h-1.8M3.3 8H1.5M12.6 3.4l-1.27 1.27M4.67 11.33L3.4 12.6M12.6 12.6l-1.27-1.27M4.67 4.67L3.4 3.4"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 const NAV_ITEMS = [
   { id: 'agents', label: 'Agents', Icon: AgentsIcon },
   { id: 'models', label: 'Models', Icon: ModelsIcon },
@@ -79,6 +93,17 @@ export default function Sidebar({ activeView, onNavigate, configPath, ollamaStat
             )}
           </button>
         ))}
+
+        {/* Pinned to the bottom of the nav box, above the status box */}
+        <button
+          className={`nav-item nav-item--bottom${activeView === 'settings' ? ' active' : ''}`}
+          onClick={() => onNavigate('settings')}
+        >
+          <span className="nav-icon">
+            <SettingsIcon size={16} />
+          </span>
+          Settings
+        </button>
       </nav>
 
       <div className="sidebar-bottom">

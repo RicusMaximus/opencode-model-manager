@@ -1,0 +1,95 @@
+// ── Components: Badge ───────────────────────────────────────────────────────
+// App-wide badge. Monospace + legible, no glow. Sizes: md (default) / sm.
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+// ── Sizes ────────────────────────────────────────────────────────────────────
+.badge--md {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+.badge--sm {
+  font-size: 11px;
+  padding: 1px 6px;
+}
+
+// ── Tones (no box-shadow / glow) ─────────────────────────────────────────────
+.badge--blue {
+  color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent-blue) 38%, transparent);
+}
+.badge--green {
+  color: var(--accent-green);
+  background: color-mix(in srgb, var(--accent-green) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent-green) 38%, transparent);
+}
+.badge--gold {
+  color: var(--accent-gold);
+  background: color-mix(in srgb, var(--accent-gold) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-gold) 42%, transparent);
+}
+.badge--yellow {
+  color: var(--accent-yellow);
+  background: color-mix(in srgb, var(--accent-yellow) 14%, transparent);
+  border-color: color-mix(in srgb, var(--accent-yellow) 40%, transparent);
+}
+.badge--violet {
+  color: #b794f6;
+  background: color-mix(in srgb, #b794f6 14%, transparent);
+  border-color: color-mix(in srgb, #b794f6 38%, transparent);
+}
+.badge--red {
+  color: var(--red-danger);
+  background: color-mix(in srgb, var(--red-danger) 14%, transparent);
+  border-color: color-mix(in srgb, var(--red-danger) 42%, transparent);
+}
+.badge--neutral {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-color: var(--border);
+}
+
+// ── Leading status dot (e.g. MCP reachability) ───────────────────────────────
+.badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 5px;
+  flex-shrink: 0;
+
+  &--green  { background: var(--accent-green); }
+  &--yellow { background: var(--accent-yellow); }
+  &--red    { background: var(--red-danger); }
+  &--gray   { background: var(--text-muted); }
+
+  // Connecting / loading — pulses with a drop-shadow glow.
+  &--loading {
+    background: var(--accent-blue);
+    animation: badge-dot-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes badge-dot-pulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+    box-shadow: 0 0 2px 0 color-mix(in srgb, var(--accent-blue) 50%, transparent);
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 7px 2px color-mix(in srgb, var(--accent-blue) 75%, transparent);
+  }
+}

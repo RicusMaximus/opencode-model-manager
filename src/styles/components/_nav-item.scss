@@ -39,6 +39,12 @@
   }
 }
 
+// Pinned to the bottom of the nav box (above the status box), still styled
+// identically to the other nav items.
+.nav-item--bottom {
+  margin-top: auto;
+}
+
 .nav-icon {
   color: var(--text-secondary);
   display: flex;

@@ -97,6 +97,30 @@ function computePlan(selections, catalog) {
     .filter(Boolean)
     .map((s) => ({ id: s.id, name: s.name, body: s.body }))
 
+  // Per-project agent entries: tools-ONLY (model/prompt/etc. stay in the global
+  // config; we never redefine the agent). For each agent the form scoped, emit a
+  // `tools` map over the project's MCP servers (`<server>*`: true|false). OpenCode
+  // enables every MCP tool for every agent by default, so the meaningful scoping
+  // here is which of THIS project's servers each agent may use.
+  const agentEntries = {}
+  const ac = selections.agentConfigs
+  if (ac && ac.enabled && ac.scope && typeof ac.scope === 'object') {
+    const names = ac.names && typeof ac.names === 'object' ? ac.names : {}
+    for (const [agentId, serverMap] of Object.entries(ac.scope)) {
+      if (!serverMap || typeof serverMap !== 'object') continue
+      const tools = {}
+      for (const id of mcpServers) {
+        if (id in serverMap) tools[`${id}*`] = !!serverMap[id]
+      }
+      const entry = {}
+      // Carry the agent's semantic display name (from its global .agent.md) so the
+      // project overview shows it without the markdown being copied in.
+      if (names[agentId]) entry.name = names[agentId]
+      entry.tools = tools
+      agentEntries[agentId] = entry
+    }
+  }
+
   return {
     servers,
     secretInputs,
@@ -104,9 +128,7 @@ function computePlan(selections, catalog) {
     configInline,
     external,
     skills,
-    // Copy the user's global agents into the project (resolved at sync/preview
-    // time from deps.globalAgentsDir — the listing is I/O so it's not done here).
-    includeAgents: !!selections.includeAgents,
+    agentEntries, // { agentId: { tools: { '<server>*': bool } } } — merged into opencode.jsonc
     projectMemory: selections.projectMemory
       ? { folder: (selections.memoryFolder || 'project-memory').trim() || 'project-memory' }
       : null,
@@ -180,6 +202,27 @@ function mergeConfig(existingConfig, plan) {
     if (Object.keys(environment).length > 0) entry.environment = environment
 
     config.mcp[server.id] = entry
+  }
+
+  // Per-project agent entries — tools-only. Deep-merge so we never clobber an
+  // existing agent's model/prompt/etc. (we don't redefine the agent), and only
+  // set/overwrite the specific `tools` keys this scaffold owns.
+  if (plan.agentEntries && Object.keys(plan.agentEntries).length > 0) {
+    config.agent =
+      config.agent && typeof config.agent === 'object' && !Array.isArray(config.agent)
+        ? { ...config.agent }
+        : {}
+    for (const [agentId, gen] of Object.entries(plan.agentEntries)) {
+      const prev =
+        config.agent[agentId] && typeof config.agent[agentId] === 'object' && !Array.isArray(config.agent[agentId])
+          ? config.agent[agentId]
+          : {}
+      const prevTools = prev.tools && typeof prev.tools === 'object' && !Array.isArray(prev.tools) ? prev.tools : {}
+      const merged = { ...prev }
+      if (gen.name) merged.name = gen.name
+      merged.tools = { ...prevTools, ...gen.tools }
+      config.agent[agentId] = merged
+    }
   }
 
   return config
@@ -365,25 +408,9 @@ async function sync(projectRoot, selections, catalog, deps = {}) {
     ;(r === 'created' ? created : skipped).push(`skill/${skill.id}/SKILL.md`)
   }
 
-  // — agents: copy all .agent.md from the user's global agents folder —
-  // Real file contents are copied (create-if-missing) so the project is
-  // self-contained; the source symlink/repo is never referenced (spec portability).
-  if (plan.includeAgents) {
-    const agentFiles = await listAgentFiles(deps.globalAgentsDir)
-    if (agentFiles.length === 0) {
-      warnings.push('Include agents was on, but no .agent.md files were found in the global agents folder.')
-    }
-    for (const a of agentFiles) {
-      let content
-      try {
-        content = await fs.readFile(a.src, 'utf8')
-      } catch {
-        continue // unreadable source file — skip
-      }
-      const r = await ensureFileIfMissing(rel('agents', a.name), content)
-      ;(r === 'created' ? created : skipped).push(`agents/${a.name}`)
-    }
-  }
+  // — agents: per-project config entries are written INTO opencode.jsonc via
+  // mergeConfig (above), not as files. We never copy the global .agent.md files;
+  // the agent definitions stay global and only per-project tools are added here.
 
   // — Obsidian project-memory vault —
   if (plan.projectMemory) {
@@ -425,7 +452,7 @@ async function sync(projectRoot, selections, catalog, deps = {}) {
     }
   }
 
-  return { created, skipped, needsFill, warnings }
+  return { created, skipped, needsFill, warnings, agentsConfigured: Object.keys(plan.agentEntries) }
 }
 
 // ── preview — dry run, no writes (spec §8 scaffold:preview) ──────────────────
@@ -445,14 +472,9 @@ async function preview(projectRoot, selections, catalog, deps = {}) {
     // .example is always (re)written → always shown as create in preview
     willCreate.push(`${SECRETS_DIR}/${f.fileName}.example`)
   }
-  await classify('opencode.jsonc')
+  await classify('opencode.jsonc') // agent config entries are merged in here
   for (const skill of plan.skills) {
     await classify(path.join('skill', skill.id, 'SKILL.md'), `skill/${skill.id}/SKILL.md`)
-  }
-  if (plan.includeAgents) {
-    for (const a of await listAgentFiles(deps.globalAgentsDir)) {
-      await classify(path.join('agents', a.name), `agents/${a.name}`)
-    }
   }
   if (plan.projectMemory) {
     await classify(plan.projectMemory.folder, `${plan.projectMemory.folder}/ (vault)`)
@@ -471,6 +493,7 @@ async function preview(projectRoot, selections, catalog, deps = {}) {
     willSkip,
     missingConfigValues: plan.missingConfigValues,
     needsSecretsFolder: plan.needsSecretsFolder,
+    willConfigureAgents: Object.keys(plan.agentEntries),
   }
 }
 

@@ -4,6 +4,7 @@ const os = require('os')
 const fs = require('fs/promises')
 const fsSync = require('fs') // callback API — needed for fs.watch (gate queue watcher)
 const http = require('http')
+const https = require('https') // HTTPS reachability probe (local MCP bridges use self-signed certs)
 const { atomicWrite } = require('./gate/utils')
 const { loadOrCreateSecret, sign, confinePath } = require('./gate/security')
 const {
@@ -28,6 +29,7 @@ const wrapperDoctor = require('./wrapper/doctor')
 const wrapperProvider = require('./wrapper/provider')
 const wrapperInstaller = require('./wrapper/installer')
 const { WRAPPER_DESCRIPTOR, buildRunCommand } = require('./wrapper/descriptor')
+const appSettings = require('./settings')
 
 const isDev = process.env.NODE_ENV === 'development'
 const DEFAULT_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode')
@@ -83,6 +85,7 @@ app.whenReady().then(() => {
   setupContentSecurityPolicy()
   createWindow()
   initGate()
+  applyStartupSettings() // auto-start the wrapper if the user opted in (non-blocking)
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
@@ -432,7 +435,9 @@ ipcMain.handle('config:read', async () => {
 
     return {
       id,
-      displayName:      meta.name        || id,
+      // Markdown frontmatter name wins; else a config-level `name` (written by the
+      // scaffolder for projects that don't carry the .agent.md); else the id.
+      displayName:      meta.name        || cfg.name || id,
       description:      cfg.description  || meta.description || '',
       version:          meta.version     || '',
       mode:             cfg.mode         || meta.mode        || '',
@@ -541,6 +546,84 @@ ipcMain.handle('config:write', async (_event, { agents, defaultModel, ollamaProv
   await fs.writeFile(tmpPath, JSON.stringify(config, null, 2), 'utf8')
   await fs.rename(tmpPath, configPath)
   return { success: true }
+})
+
+// ── MCP server reachability ─────────────────────────────────────────────────
+// Probes the active project's configured MCP servers so the agent cards can show
+// a reachability dot. Reachability is a property of the server (same for every
+// agent that uses it). Returns { servers: { <id>: status } } where status is:
+//   'reachable'       → the endpoint answered (green)
+//   'unauthenticated' → the endpoint answered 401/403 — up but needs auth (yellow)
+//   'unreachable'     → connection refused / timed out (red)
+//   'unknown'         → no probeable http(s) URL  ·  'disabled' → enabled:false
+
+// HTTP(S) GET that classifies the response. We read only the status line then
+// destroy the connection (MCP endpoints often stream SSE). 401/403 is the
+// "running but unauthenticated" signal.
+function httpReachability(urlStr, timeout = 2500) {
+  return new Promise((resolve) => {
+    let u
+    try { u = new URL(urlStr) } catch { return resolve('unknown') }
+    const mod = u.protocol === 'https:' ? https : http
+    let req
+    try {
+      req = mod.request(
+        {
+          method: 'GET',
+          hostname: u.hostname,
+          port: u.port || (u.protocol === 'https:' ? 443 : 80),
+          path: u.pathname && u.pathname !== '' ? u.pathname : '/',
+          timeout,
+          rejectUnauthorized: false, // local bridges (e.g. Obsidian) use self-signed certs
+        },
+        (res) => {
+          const code = res.statusCode
+          res.destroy()
+          resolve(code === 401 || code === 403 ? 'unauthenticated' : 'reachable')
+        },
+      )
+    } catch {
+      return resolve('unreachable')
+    }
+    req.on('error', () => resolve('unreachable'))
+    req.setTimeout(timeout, () => { req.destroy(); resolve('unreachable') })
+    req.end()
+  })
+}
+
+// The http(s) URL to probe for a server: its `url` (remote), or the first http(s)
+// URL in its `environment` (e.g. a local bridge's OBSIDIAN_API_URL).
+function mcpProbeUrl(srv) {
+  if (typeof srv.url === 'string') return srv.url
+  if (srv.environment && typeof srv.environment === 'object') {
+    for (const v of Object.values(srv.environment)) {
+      if (typeof v === 'string' && /^https?:\/\//i.test(v)) return v
+    }
+  }
+  return null
+}
+
+ipcMain.handle('mcp:status', async () => {
+  const configDir = await getConfigDir()
+  let mcp = {}
+  try {
+    const raw = await fs.readFile(path.join(configDir, 'opencode.jsonc'), 'utf8')
+    const { default: strip } = await import('strip-json-comments')
+    const parsed = JSON.parse(strip(raw))
+    if (parsed.mcp && typeof parsed.mcp === 'object' && !Array.isArray(parsed.mcp)) mcp = parsed.mcp
+  } catch { /* no config / unreadable */ }
+
+  const servers = {}
+  await Promise.all(
+    Object.entries(mcp).map(async ([id, srv]) => {
+      if (!srv || typeof srv !== 'object') { servers[id] = 'unknown'; return }
+      if (srv.enabled === false) { servers[id] = 'disabled'; return }
+      const url = mcpProbeUrl(srv)
+      if (!url) { servers[id] = 'unknown'; return }
+      servers[id] = await httpReachability(url)
+    }),
+  )
+  return { servers }
 })
 
 // ── Agent File Create ─────────────────────────────────────────────────────────
@@ -903,11 +986,21 @@ ipcMain.handle('scaffold:catalog', async () => {
   return { mcp: MCP_CATALOG, skills: SKILLS_CATALOG }
 })
 
-// List the agents available to copy (for the form's "Include agents (N)" toggle).
+// List the global agents (for the form's per-agent scoping grid). Parses each
+// .agent.md frontmatter for its semantic `name` so the scaffolder can carry that
+// display name into the project config (the markdown itself is NOT copied).
 ipcMain.handle('scaffold:global-agents', async () => {
   const dir = await getGlobalAgentsDir()
-  const agents = await scaffoldEngine.listAgentFiles(dir)
-  return { dir, agents: agents.map((a) => ({ id: a.id, name: a.name })) }
+  const files = await scaffoldEngine.listAgentFiles(dir)
+  const agents = []
+  for (const f of files) {
+    let displayName = f.id
+    try {
+      displayName = parseAgentFile(await fs.readFile(f.src, 'utf8')).name || f.id
+    } catch { /* unreadable — fall back to id */ }
+    agents.push({ id: f.id, displayName })
+  }
+  return { dir, agents }
 })
 
 // Header/guard info: the project root, display name, and whether scaffolding is
@@ -932,7 +1025,7 @@ ipcMain.handle('scaffold:preview', async (_event, selections) => {
   try {
     const root = await getConfigDir()
     if (isGlobalConfigDir(root)) return { error: 'global-config' }
-    return await scaffoldEngine.preview(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG }, { globalAgentsDir: await getGlobalAgentsDir() })
+    return await scaffoldEngine.preview(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
   } catch (err) {
     return { error: err.message }
   }
@@ -944,7 +1037,7 @@ ipcMain.handle('scaffold:sync', async (_event, selections) => {
     const root = await getConfigDir()
     if (isGlobalConfigDir(root)) return { error: 'global-config' }
     process.env.SCAFFOLD_TEMPLATE_DIR = getTemplateDir()
-    const result = await scaffoldEngine.sync(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG }, { globalAgentsDir: await getGlobalAgentsDir() })
+    const result = await scaffoldEngine.sync(root, selections || {}, { MCP_CATALOG, SKILLS_CATALOG })
     return { success: true, ...result }
   } catch (err) {
     return { success: false, error: err.message }
@@ -1059,30 +1152,63 @@ ipcMain.handle('wrapper:models', async () => {
   return { models: status.models || [], running: status.state === 'running' }
 })
 
-// Start (idempotent). Provider block + secrets → GLOBAL config; CLAUDE_CWD →
-// active workspace (so Claude Code tools scope to the project the user is in).
-// The launch command is built from the venv Python produced by the installer.
+// Start the managed wrapper (idempotent). Provider block + secrets → GLOBAL
+// config; CLAUDE_CWD → active workspace (so Claude Code tools scope to the
+// project the user is in). The launch command is built from the venv Python
+// produced by the installer. Shared by the IPC start, the settings toggle, and
+// auto-start-on-launch.
+async function startManagedWrapper(opts = {}) {
+  const installDir = getWrapperInstallDir()
+  if (!wrapperInstaller.isInstalled(installDir)) {
+    return { state: 'stopped', error: 'not-installed' }
+  }
+  const globalDir = await getGlobalConfigDir()
+  const activeDir = await getConfigDir()
+  const venvPython = wrapperInstaller.getVenvPython(installDir)
+  return wrapperSupervisor.ensureWrapper({
+    profile: opts.profile,
+    projectDir: isGlobalConfigDir(activeDir) ? undefined : activeDir,
+    configDir: globalDir,
+    runnerCwd: installDir,
+    command: buildRunCommand(venvPython),
+    detach: !!opts.detach,
+  })
+}
+
 ipcMain.handle('wrapper:start', async (_event, opts) => {
   try {
-    const installDir = getWrapperInstallDir()
-    if (!wrapperInstaller.isInstalled(installDir)) {
-      return { state: 'stopped', error: 'not-installed' }
-    }
-    const globalDir = await getGlobalConfigDir()
-    const activeDir = await getConfigDir()
-    const venvPython = wrapperInstaller.getVenvPython(installDir)
-    return await wrapperSupervisor.ensureWrapper({
-      profile: opts?.profile,
-      projectDir: isGlobalConfigDir(activeDir) ? undefined : activeDir,
-      configDir: globalDir,
-      runnerCwd: installDir,
-      command: buildRunCommand(venvPython),
-      detach: !!opts?.detach,
-    })
+    return await startManagedWrapper(opts || {})
   } catch (err) {
     return { state: 'crashed', error: err.message }
   }
 })
+
+// ── App settings (agent-manager-settings.json, separate from OpenCode config) ──
+
+ipcMain.handle('settings:get', async () => {
+  return appSettings.readSettings(app.getPath('userData'))
+})
+
+// Persist a partial settings update. This is an app PREFERENCE store only — it
+// does not start or stop the wrapper. `runClaudeSubOnStartup` only changes
+// what happens on the NEXT app launch (applyStartupSettings); the running
+// service is controlled from the Models screen Start/Stop.
+ipcMain.handle('settings:set', async (_event, partial) => {
+  return appSettings.writeSettings(app.getPath('userData'), partial || {})
+})
+
+// On launch, start the managed wrapper if the user opted in. Non-blocking so it
+// never delays the window; status surfaces on the Models screen.
+async function applyStartupSettings() {
+  try {
+    const s = await appSettings.readSettings(app.getPath('userData'))
+    if (s.runClaudeSubOnStartup) {
+      startManagedWrapper().catch((err) => console.warn('wrapper start (on launch):', err.message))
+    }
+  } catch (err) {
+    console.warn('settings: failed to apply on launch:', err.message)
+  }
+}
 
 ipcMain.handle('wrapper:stop', async () => {
   try {

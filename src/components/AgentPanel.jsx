@@ -16,10 +16,11 @@ function PlusIcon({ size = 14 }) {
 
 export default function AgentPanel({
   agents,
-  ollamaModels,
-  onModelChange,
   onOpenSettings,
-  onCreateAgent
+  onCreateAgent,
+  skills = [],
+  mcpStatus = {},
+  mcpReady = false
 }) {
   return (
     <div className="agent-panel">
@@ -44,9 +45,10 @@ export default function AgentPanel({
             <AgentCard
               key={agent.id}
               agent={agent}
-              ollamaModels={ollamaModels}
-              onModelChange={onModelChange}
               onOpenSettings={onOpenSettings}
+              skills={skills}
+              mcpStatus={mcpStatus}
+              mcpReady={mcpReady}
             />
           ))}
         </div>
