@@ -50,6 +50,19 @@
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  position: relative;
+}
+
+// Notification dot on a nav item's icon (e.g. pending reviews).
+.nav-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red-danger);
+  box-shadow: 0 0 0 2px var(--bg-sidebar), 0 0 6px 1px color-mix(in srgb, var(--red-danger) 70%, transparent);
 }
 
 .nav-badge {

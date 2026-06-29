@@ -4,7 +4,6 @@ import Sidebar from "./components/Sidebar.jsx";
 import AgentPanel from "./components/AgentPanel.jsx";
 import AgentSettingsPanel from "./components/AgentSettingsPanel.jsx";
 import OllamaPanel from "./components/OllamaPanel.jsx";
-import ClaudeSubscriptionCard from "./components/ClaudeSubscriptionCard.jsx";
 import ReviewQueuePanel from "./components/ReviewQueuePanel.jsx";
 import RightSidebar from "./components/RightSidebar.jsx";
 import StatusBar from "./components/StatusBar.jsx";
@@ -430,7 +429,6 @@ export default function App() {
           activeView={activeView}
           onNavigate={setActiveView}
           configPath={configPath}
-          ollamaStatus={ollamaStatus}
           pendingReviewCount={pendingReviewCount}
         />
         <main className="app-main">
@@ -466,14 +464,11 @@ export default function App() {
             />
           )}
           {activeView === "models" && (
-            <div className="models-view">
-              <ClaudeSubscriptionCard />
-              <OllamaPanel
-                ollamaModels={ollamaStatus.models}
-                ollamaConnected={ollamaStatus.connected}
-                systemInfo={systemInfo}
-              />
-            </div>
+            <OllamaPanel
+              ollamaModels={ollamaStatus.models}
+              ollamaConnected={ollamaStatus.connected}
+              systemInfo={systemInfo}
+            />
           )}
           {activeView === "review-queue" && <ReviewQueuePanel />}
           {activeView === "settings" && (

@@ -4,6 +4,11 @@
   margin-bottom: 14px;
 }
 
+// Inside a card's .rs-metrics the gap handles spacing.
+.rs-metrics .metric-row {
+  margin-bottom: 0;
+}
+
 .metric-row-header {
   display: flex;
   align-items: center;
@@ -26,6 +31,7 @@
   &.blue   { color: var(--accent-blue); }
   &.green  { color: var(--accent-green); }
   &.yellow { color: var(--accent-yellow); }
+  &.mono   { color: var(--text-primary); }
 }
 
 .metric-bar-bg {

@@ -1,0 +1,69 @@
+// ── Components: Card ────────────────────────────────────────────────────────
+// App-wide card design system. Border radius scales with `size`; background +
+// box-shadow (size & spread) scale with `elevation`. Header layout is fixed:
+// | optional icon | title | badge bar | button |.
+
+.card {
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+// ── Sizes → border radius + padding ──────────────────────────────────────────
+.card--sm { border-radius: 4px; padding: 12px; gap: 8px; }
+.card--md { border-radius: 6px; padding: 16px; gap: 12px; }
+.card--lg { border-radius: 8px; padding: 20px; gap: 16px; }
+
+// ── Elevation → background + shadow (size & spread grow with elevation) ───────
+.card--e1 {
+  background: var(--bg-card);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.card--e2 {
+  background: var(--bg-workspace);
+  box-shadow: 0 3px 12px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.card--e3 {
+  background: var(--bg-elevated);
+  box-shadow: 0 8px 28px 2px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+// ── Header: | icon | title | badges | button | ───────────────────────────────
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-header-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.card-header-title {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-header-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.card-header-action {
+  margin-left: auto; // push the button to the far right
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

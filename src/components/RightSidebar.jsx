@@ -1,4 +1,6 @@
 import React from 'react'
+import Card, { CardHeader } from './Card.jsx'
+import Badge from './Badge.jsx'
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 
@@ -67,174 +69,118 @@ function classifyLogLine(line) {
   return ''
 }
 
+// ── Shared rows ─────────────────────────────────────────────────────────────
+
+function MetricRow({ label, value, valueClass, pct: p, barClass }) {
+  return (
+    <div className="metric-row">
+      <div className="metric-row-header">
+        <span className="metric-label">{label}</span>
+        <span className={`metric-value${valueClass ? ` ${valueClass}` : ''}`}>{value}</span>
+      </div>
+      <div className="metric-bar-bg">
+        <div className={`metric-bar-fill ${barClass}`} style={{ width: `${p}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function HwRow({ icon, label, value }) {
+  return (
+    <div className="hw-row">
+      <span className="hw-row-icon">{icon}</span>
+      <div className="hw-row-info">
+        <span className="hw-row-label">{label}</span>
+        <span className="hw-row-value">{value}</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Agents Right Sidebar ───────────────────────────────────────────────────
 
 function AgentsRightSidebar({ systemInfo }) {
   const ram   = systemInfo?.ram   ?? { used: 0, total: 16 }
-  const cpu   = systemInfo?.cpu   ?? { brand: 'Detecting...', speed: 0, cores: 0 }
   const vram  = systemInfo?.vram  ?? { used: 0, total: 0 }
 
-  // Simulate CPU usage (real usage requires continuous polling; show a demo value)
-  const cpuUsePct = 42
+  const cpuUsePct = 42 // demo (real CPU usage needs continuous polling)
   const ramPct    = pct(ram.used, ram.total)
   const vramPct   = pct(vram.used, vram.total)
 
   return (
     <aside className="sidebar-right agents">
-      {/* System Info */}
-      <div className="rs-section">
-        <div className="rs-section-label">System Info</div>
-
-        <div className="metric-row">
-          <div className="metric-row-header">
-            <span className="metric-label">RAM</span>
-            <span className="metric-value blue">{ram.used} / {ram.total} GB</span>
-          </div>
-          <div className="metric-bar-bg">
-            <div
-              className="metric-bar-fill bar-blue"
-              style={{ width: `${ramPct}%` }}
-            />
-          </div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader title="System Info" />
+        <div className="rs-metrics">
+          <MetricRow label="RAM" value={`${ram.used} / ${ram.total} GB`} valueClass="blue" pct={ramPct} barClass="bar-blue" />
+          <MetricRow label="CPU" value={`${cpuUsePct}%`} valueClass="green" pct={cpuUsePct} barClass="bar-green" />
+          <MetricRow label="VRAM" value={vram.total > 0 ? `${vram.used} / ${vram.total} GB` : 'N/A'} valueClass="yellow" pct={vramPct} barClass="bar-yellow" />
         </div>
+      </Card>
 
-        <div className="metric-row">
-          <div className="metric-row-header">
-            <span className="metric-label">CPU</span>
-            <span className="metric-value green">{cpuUsePct}%</span>
-          </div>
-          <div className="metric-bar-bg">
-            <div
-              className="metric-bar-fill bar-green"
-              style={{ width: `${cpuUsePct}%` }}
-            />
-          </div>
-        </div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader icon={<ClockIcon size={14} />} title="Performance" />
+        <p className="turbo-card-desc">Coming soon: live model latency and token/s tracking.</p>
+      </Card>
 
-        <div className="metric-row">
-          <div className="metric-row-header">
-            <span className="metric-label">VRAM</span>
-            <span className="metric-value yellow">
-              {vram.total > 0 ? `${vram.used} / ${vram.total} GB` : 'N/A'}
-            </span>
-          </div>
-          <div className="metric-bar-bg">
-            <div
-              className="metric-bar-fill bar-yellow"
-              style={{ width: `${vramPct}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Performance */}
-      <div className="rs-section">
-        <div className="rs-section-label" style={{ marginBottom: 12 }}>Performance</div>
-        <div className="perf-placeholder">
-          <span style={{ color: 'var(--text-dim)', flexShrink: 0 }}>
-            <ClockIcon size={16} />
-          </span>
-          <span className="perf-placeholder-text">
-            Coming soon: Live model latency and token/s tracking
-          </span>
-        </div>
-
-        <div className="turbo-card">
-          <div className="turbo-card-header">
-            <span style={{ color: 'var(--accent-green)' }}>
-              <LightningIcon size={14} />
-            </span>
-            <span className="turbo-card-title">Turbo Mode</span>
-          </div>
-          <p className="turbo-card-desc">
-            Accelerate local inference using available CUDA cores.
-          </p>
-        </div>
-      </div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader icon={<LightningIcon size={14} />} title="Turbo Mode" />
+        <p className="turbo-card-desc">Accelerate local inference using available CUDA cores.</p>
+      </Card>
     </aside>
   )
 }
 
 // ── Models Right Sidebar ───────────────────────────────────────────────────
 
-function ModelsRightSidebar({ systemInfo }) {
+function ModelsRightSidebar({ systemInfo, ollamaStatus }) {
   const ram   = systemInfo?.ram   ?? { used: 0, total: 16 }
   const vram  = systemInfo?.vram  ?? { used: 0, total: 0 }
   const cpu   = systemInfo?.cpu   ?? { brand: 'Detecting...', cores: 0 }
   const gpu   = systemInfo?.gpu   ?? 'Unknown GPU'
+  const connected = ollamaStatus?.connected ?? false
 
   const vramPct = pct(vram.used, vram.total)
   const ramPct  = pct(ram.used, ram.total)
 
   return (
     <aside className="sidebar-right models">
-      {/* System Resources */}
-      <div className="rs-section">
-        <div className="rs-section-heading">System Resources</div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader
+          title="Ollama"
+          badges={
+            <Badge size="sm" tone={connected ? 'green' : 'red'} dot={connected ? 'green' : 'red'}>
+              {connected ? 'Connected' : 'Offline'}
+            </Badge>
+          }
+        />
+        <span className="rs-addr">127.0.0.1:11434</span>
+      </Card>
 
-        <div className="metric-row">
-          <div className="metric-row-header">
-            <span className="metric-label">VRAM Utilization</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
-              {vram.total > 0 ? `${vram.used} / ${vram.total} GB` : 'N/A'}
-            </span>
-          </div>
-          <div className="metric-bar-bg tall">
-            <div
-              className="metric-bar-fill bar-blue"
-              style={{ width: `${vramPct}%` }}
-            />
-          </div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader title="System Resources" />
+        <div className="rs-metrics">
+          <MetricRow label="VRAM Utilization" value={vram.total > 0 ? `${vram.used} / ${vram.total} GB` : 'N/A'} valueClass="mono" pct={vramPct} barClass="bar-blue" />
+          <MetricRow label="System RAM" value={`${ram.used} / ${ram.total} GB`} valueClass="mono" pct={ramPct} barClass="bar-yellow" />
         </div>
+      </Card>
 
-        <div className="metric-row">
-          <div className="metric-row-header">
-            <span className="metric-label">System RAM</span>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-primary)' }}>
-              {ram.used} / {ram.total} GB
-            </span>
-          </div>
-          <div className="metric-bar-bg tall">
-            <div
-              className="metric-bar-fill bar-yellow"
-              style={{ width: `${ramPct}%` }}
-            />
-          </div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader title="Hardware Profile" />
+        <div className="rs-metrics">
+          <HwRow icon={<CpuIcon size={14} />} label="Processor" value={cpu.brand} />
+          <HwRow icon={<GpuIcon size={14} />} label="Graphics" value={gpu} />
         </div>
-      </div>
+      </Card>
 
-      {/* Hardware Profile */}
-      <div className="rs-section">
-        <div className="rs-section-heading">Hardware Profile</div>
-        <div className="hw-card">
-          <div className="hw-row">
-            <span className="hw-row-icon"><CpuIcon size={14} /></span>
-            <div className="hw-row-info">
-              <span className="hw-row-label">Processor</span>
-              <span className="hw-row-value">{cpu.brand}</span>
-            </div>
-          </div>
-          <div className="hw-row">
-            <span className="hw-row-icon"><GpuIcon size={14} /></span>
-            <div className="hw-row-info">
-              <span className="hw-row-label">Graphics</span>
-              <span className="hw-row-value">{gpu}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Ollama Logs */}
-      <div className="rs-section">
-        <div className="rs-section-heading">Ollama Logs</div>
+      <Card elevation={1} size="sm" className="rs-card">
+        <CardHeader title="Ollama Logs" />
         <div className="log-box">
           {DEMO_LOGS.map((line, i) => (
-            <div key={i} className={`log-line ${classifyLogLine(line)}`}>
-              {line}
-            </div>
+            <div key={i} className={`log-line ${classifyLogLine(line)}`}>{line}</div>
           ))}
         </div>
-      </div>
+      </Card>
     </aside>
   )
 }
