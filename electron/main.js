@@ -963,11 +963,29 @@ ipcMain.handle('scaffold:doctor', async (_event, selections) => {
 // global dir, while CLAUDE_CWD still points at the active project so Claude Code
 // file tools scope correctly.
 
-// The true global config dir (independent of the active workspace). Ensures it
-// exists before we write the provider block into it.
+// Resolve the GLOBAL OpenCode config dir the way OpenCode's own CLI does, so the
+// provider block lands in the file OpenCode ACTUALLY loads. OpenCode honors
+// OPENCODE_CONFIG (an explicit config file) and OPENCODE_CONFIG_DIR; otherwise it
+// uses $XDG_CONFIG_HOME/opencode, falling back to ~/.config/opencode.
+//
+// This was a real billing bug: we previously hard-coded ~/.config/opencode, so on
+// a machine with OPENCODE_CONFIG_DIR set the `claude-sub` provider was written to
+// a directory OpenCode never reads. The agents' `claude-sub/*` models then failed
+// to resolve and OpenCode silently fell back to the default `anthropic/*` model —
+// billing the metered API instead of the subscription.
 async function getGlobalConfigDir() {
-  await fs.mkdir(DEFAULT_CONFIG_DIR, { recursive: true })
-  return DEFAULT_CONFIG_DIR
+  let dir
+  if (process.env.OPENCODE_CONFIG) {
+    dir = path.dirname(process.env.OPENCODE_CONFIG)
+  } else if (process.env.OPENCODE_CONFIG_DIR) {
+    dir = process.env.OPENCODE_CONFIG_DIR
+  } else if (process.env.XDG_CONFIG_HOME) {
+    dir = path.join(process.env.XDG_CONFIG_HOME, 'opencode')
+  } else {
+    dir = DEFAULT_CONFIG_DIR
+  }
+  await fs.mkdir(dir, { recursive: true })
+  return dir
 }
 
 // The managed wrapper install lives under userData (machine-local, outside any
